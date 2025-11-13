@@ -241,11 +241,17 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
-            Text(
-                text = "Hola $nombre ($alias)"
-            )
+            Column( Modifier.weight(1f)) {
+                Text(
+                    text = "¡Qué tal $nombre ($alias)!"
+                )
+                Text(
+                    text = if(listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else "HAY MUCHO POR HACER!",
+                    fontSize = 25.sp
+                )
+            }
             IconButton(
                 onClick = { expanded = true},
             ) {
@@ -286,7 +292,7 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
             OutlinedTextField(
                 value = nuevaTarea,
                 onValueChange = { nuevaTarea = it},
-                label = {Text("Nueva tarea")},
+                label = {Text("¿Qué tienes que hacer $alias?")},
                 modifier = Modifier.weight(1f),
                 colors = OutlinedTextFieldDefaults.colors(),
                 singleLine = true
