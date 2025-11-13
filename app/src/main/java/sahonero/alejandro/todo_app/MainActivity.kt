@@ -1,6 +1,7 @@
 package sahonero.alejandro.todo_app
 
 import android.os.Bundle
+import android.renderscript.RenderScript
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -40,7 +43,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -49,10 +56,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -291,6 +301,7 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
         Column(
             Modifier.fillMaxSize()
                 .padding(innerPadding)
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp)
         ) {
             // --- WELCOME ---
             Text(
@@ -405,11 +416,91 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     }
 }
 
+@Composable
+fun AddTaskDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    alias: String
+){
+    var nuevaTarea by remember { mutableStateOf("") }
+    var selectedPriority by remember { mutableStateOf(0) }
+
+    Dialog( onDismissRequest = onDismiss ) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Column(Modifier.padding(16.dp) ) {
+                // --- ADD/CANCEL BUTTONS ---
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton( onClick = onDismiss ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Cancelar"
+                        )
+                    }
+                    TextButton(
+                        onClick = { if (nuevaTarea.isNotBlank()) onConfirm(nuevaTarea) },
+                        enabled = nuevaTarea.isNotBlank()
+                    ) {
+                        Text("Listo")
+                    }
+                }
+                // --- CONTENT ---
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = "¿Qué quieres hacer $alias?",
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(10.dp))
+                TextField(
+                    value = nuevaTarea,
+                    onValueChange = { nuevaTarea = it },
+                    placeholder = { Text("Comprar patatas")}
+                )
+                Text(
+                    text = "Prioridad",
+                    fontWeight = FontWeight.Bold
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // High priority
+                    RadioButton(
+                        selected = selectedPriority == 3,
+                        onClick = { selectedPriority = 3}
+                    )
+                    Text("Alta")
+                    // Medium priority
+                    RadioButton(
+                        selected = selectedPriority == 2,
+                        onClick = { selectedPriority = 2}
+                    )
+                    Text("Media")
+                    // Low priority
+                    RadioButton(
+                        selected = selectedPriority == 1,
+                        onClick = { selectedPriority = 1}
+                    )
+                    Text("Baja")
+                }
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
     TODOAppTheme {
         //Login ( onLogin = {} )
-        Tasks( "Alejandro", "ale", onBack = {})
+        //Tasks( "Alejandro", "ale", onBack = {})
+        AddTaskDialog( onDismiss = {}, onConfirm = {}, "ale")
     }
 }
