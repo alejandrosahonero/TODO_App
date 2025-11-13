@@ -22,11 +22,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -35,6 +37,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -233,127 +236,146 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     var expanded by remember { mutableStateOf(false) }
     val opcionesMenu = listOf("Preferencias")
 
-    Column(
-        Modifier
-            .fillMaxSize()
+    Box(
+        Modifier.fillMaxSize()
             .padding(20.dp)
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column( Modifier.weight(1f)) {
-                Text(
-                    text = "¡Qué tal $nombre ($alias)!"
-                )
-                Text(
-                    text = if(listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else "HAY MUCHO POR HACER!",
-                    fontSize = 25.sp
-                )
-            }
-            IconButton(
-                onClick = { expanded = true},
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "Menu"
-                )
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = {expanded = false}
-                ) {
-                    opcionesMenu.forEach { opcion ->
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Settings,
-                                        contentDescription = "Preferencias"
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(opcion)
-                                }
-                            },
-                            onClick = {}
-                        )
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = nuevaTarea,
-                onValueChange = { nuevaTarea = it},
-                label = {Text("¿Qué tienes que hacer $alias?")},
-                modifier = Modifier.weight(1f),
-                colors = OutlinedTextFieldDefaults.colors(),
-                singleLine = true
-            )
-            Spacer(Modifier.width(10.dp))
-            Button(onClick = {
-                if(!nuevaTarea.isBlank()) {
-                    listaTareas.add(nuevaTarea)
-                    nuevaTarea = ""
-                }
-            }) {
-                Text("Añadir")
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        LazyColumn(
+        Column(
             Modifier.fillMaxSize()
         ) {
-            items(listaTareas){ tarea ->
-
-                val isCompleted = tareasCompletadas.contains(tarea)
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "¡Qué tal $nombre ($alias)!"
+                    )
+                    Text(
+                        text = if (listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else "HAY MUCHO POR HACER!",
+                        fontSize = 25.sp
+                    )
+                }
+                IconButton(
+                    onClick = { expanded = true },
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Menu"
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
                     ) {
-                        Checkbox(
-                            checked = isCompleted,
-                            onCheckedChange = { nuevoValor ->
-                                if(nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(tarea)
-                            }
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = tarea,
-                            fontSize = 15.sp,
-                            textDecoration = if(isCompleted) TextDecoration.LineThrough else null
-                        )
-                    }
-                    IconButton (
-                        onClick = {
-                            listaTareas.remove(tarea)
-                            tareasCompletadas.remove(tarea)
+                        opcionesMenu.forEach { opcion ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Settings,
+                                            contentDescription = "Preferencias"
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(opcion)
+                                    }
+                                },
+                                onClick = {}
+                            )
                         }
-                    ){
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "Borrar tarea",
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
                 }
-                HorizontalDivider()
             }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = nuevaTarea,
+                    onValueChange = { nuevaTarea = it },
+                    label = { Text("¿Qué tienes que hacer $alias?") },
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(),
+                    singleLine = true
+                )
+                Spacer(Modifier.width(10.dp))
+                Button(onClick = {
+                    if (!nuevaTarea.isBlank()) {
+                        listaTareas.add(nuevaTarea)
+                        nuevaTarea = ""
+                    }
+                }) {
+                    Text("Añadir")
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            LazyColumn(
+                Modifier.fillMaxSize()
+            ) {
+                items(listaTareas) { tarea ->
+
+                    val isCompleted = tareasCompletadas.contains(tarea)
+
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Checkbox(
+                                checked = isCompleted,
+                                onCheckedChange = { nuevoValor ->
+                                    if (nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(
+                                        tarea
+                                    )
+                                }
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = tarea,
+                                fontSize = 15.sp,
+                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                listaTareas.remove(tarea)
+                                tareasCompletadas.remove(tarea)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = "Borrar tarea",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    HorizontalDivider()
+                }
+            }
+        }
+        IconButton(
+            onClick = {},
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.size(60.dp)
+                .align(Alignment.BottomEnd)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Añadir tarea",
+                tint = MaterialTheme.colorScheme.onPrimary
+            )
         }
     }
 }
