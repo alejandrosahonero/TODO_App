@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
@@ -233,6 +234,9 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     val listaTareas = remember { mutableStateListOf<String>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
 
+    var fab by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
     var expanded by remember { mutableStateOf(false) }
     val opcionesMenu = listOf("Preferencias")
 
@@ -250,7 +254,7 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = "¡Qué tal $nombre ($alias)!"
+                        text = "¡Qué tal $nombre!"
                     )
                     Text(
                         text = if (listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else "HAY MUCHO POR HACER!",
@@ -295,24 +299,52 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
-                    value = nuevaTarea,
-                    onValueChange = { nuevaTarea = it },
-                    label = { Text("¿Qué tienes que hacer $alias?") },
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Buscar"
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Busca algo")
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     colors = OutlinedTextFieldDefaults.colors(),
                     singleLine = true
                 )
-                Spacer(Modifier.width(10.dp))
-                Button(onClick = {
-                    if (!nuevaTarea.isBlank()) {
-                        listaTareas.add(nuevaTarea)
-                        nuevaTarea = ""
-                    }
-                }) {
-                    Text("Añadir")
-                }
             }
             Spacer(Modifier.height(10.dp))
+            if(fab) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = nuevaTarea,
+                        onValueChange = { nuevaTarea = it },
+                        label = { Text("¿Qué tienes que hacer $alias?") },
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Button(onClick = {
+                        if (!nuevaTarea.isBlank()) {
+                            listaTareas.add(nuevaTarea)
+                            nuevaTarea = ""
+                        }
+                        fab = false
+                    }) {
+                        Text("Añadir")
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+            }
             LazyColumn(
                 Modifier.fillMaxSize()
             ) {
@@ -364,7 +396,7 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
             }
         }
         IconButton(
-            onClick = {},
+            onClick = { fab = true },
             colors = IconButtonDefaults.iconButtonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             ),
