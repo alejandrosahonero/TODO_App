@@ -22,27 +22,26 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -67,21 +66,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TODOAppTheme{
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    AppNavigation(
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                AppNavigation()
             }
         }
     }
 }
 
 @Composable
-fun AppNavigation(modifier: Modifier = Modifier) {
+fun AppNavigation() {
     val navController = rememberNavController()
     NavHost(
-        modifier = modifier,
         navController = navController,
         startDestination = "login"
     ){
@@ -124,7 +118,6 @@ fun Login(onLogin: (String, String) -> Unit){
     ){
         Card(
             modifier = Modifier.padding(20.dp),
-            //colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
 
         ) {
@@ -228,123 +221,137 @@ fun Login(onLogin: (String, String) -> Unit){
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     var nuevaTarea by remember { mutableStateOf("") }
     val listaTareas = remember { mutableStateListOf<String>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
 
-    var fab by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
     var expanded by remember { mutableStateOf(false) }
     val opcionesMenu = listOf("Preferencias")
 
-    Box(
-        Modifier.fillMaxSize()
-            .padding(20.dp)
-    ) {
-        Column(
-            Modifier.fillMaxSize()
-        ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(Modifier.weight(1f)) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
                     Text(
                         text = "¡Qué tal $nombre!"
                     )
-                    Text(
-                        text = if (listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else "HAY MUCHO POR HACER!",
-                        fontSize = 25.sp
-                    )
-                }
-                IconButton(
-                    onClick = { expanded = true },
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "Menu"
-                    )
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                },
+                actions = {
+                    // --- SEARCH ICON ---
+                    IconButton(
+                        onClick = { searching = true }
                     ) {
-                        opcionesMenu.forEach { opcion ->
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Settings,
-                                            contentDescription = "Preferencias"
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(opcion)
-                                    }
-                                },
-                                onClick = {}
-                            )
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search"
+                        )
+                    }
+                    // --- MENU ---
+                    IconButton(
+                        onClick = { expanded = true },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "Menu"
+                        )
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            opcionesMenu.forEach { opcion ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Settings,
+                                                contentDescription = "Preferencias"
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(opcion)
+                                        }
+                                    },
+                                    onClick = {}
+                                )
+                            }
                         }
                     }
                 }
-            }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            Modifier.fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // --- WELCOME ---
+            Text(
+                text = if (listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else "HAY MUCHO POR HACER!",
+                fontSize = 25.sp
+            )
             Spacer(Modifier.height(10.dp))
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Buscar"
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text("Busca algo")
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(),
-                    singleLine = true
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            if(fab) {
+            // --- SEARCH BAR ---
+            if(searching) {
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedTextField(
-                        value = nuevaTarea,
-                        onValueChange = { nuevaTarea = it },
-                        label = { Text("¿Qué tienes que hacer $alias?") },
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Buscar"
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("Busca algo")
+                            }
+                        },
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(),
                         singleLine = true
                     )
-                    Spacer(Modifier.width(10.dp))
-                    Button(onClick = {
-                        if (!nuevaTarea.isBlank()) {
-                            listaTareas.add(nuevaTarea)
-                            nuevaTarea = ""
-                        }
-                        fab = false
-                    }) {
-                        Text("Añadir")
-                    }
                 }
                 Spacer(Modifier.height(10.dp))
             }
+            // --- ADD TASK ---
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = nuevaTarea,
+                    onValueChange = { nuevaTarea = it },
+                    label = { Text("¿Qué tienes que hacer $alias?") },
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(),
+                    singleLine = true
+                )
+                Spacer(Modifier.width(10.dp))
+                Button(onClick = {
+                    if (!nuevaTarea.isBlank()) {
+                        listaTareas.add(nuevaTarea)
+                        nuevaTarea = ""
+                    }
+                    searching = false
+                }) {
+                    Text("Añadir")
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            // --- TASKS LIST ---
             LazyColumn(
                 Modifier.fillMaxSize()
             ) {
@@ -394,20 +401,6 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                     HorizontalDivider()
                 }
             }
-        }
-        IconButton(
-            onClick = { fab = true },
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.size(60.dp)
-                .align(Alignment.BottomEnd)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Añadir tarea",
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
         }
     }
 }
