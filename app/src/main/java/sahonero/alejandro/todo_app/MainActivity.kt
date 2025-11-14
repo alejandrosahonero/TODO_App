@@ -128,109 +128,111 @@ fun Login(onLogin: (String, String) -> Unit){
     var showErrorNombre by remember { mutableStateOf(false) }
     var showErrorAlias by remember { mutableStateOf(false) }
 
-    Box(
-        Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ){
-        Card(
-            modifier = Modifier.padding(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
-
+    Surface( Modifier.fillMaxSize() ) {
+        Box(
+            Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                Modifier.padding(40.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            Card(
+                modifier = Modifier.padding(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.todo_logo),
-                    contentDescription = "Logo de la app",
-                    modifier = Modifier.size(50.dp),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(20.dp))
-                Text(
-                    text = "TO-DO App",
-                    fontSize = 20.sp
-                )
-                Spacer(Modifier.height(20.dp))
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it; showErrorNombre=false },
-                    label = {Text("Nombre")},
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors()
-                )
-                if (showErrorNombre){
-                    Spacer(Modifier.height(15.dp))
-                    Row(
+                Column(
+                    Modifier.padding(40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.todo_logo),
+                        contentDescription = "Logo de la app",
+                        modifier = Modifier.size(50.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        text = "TO-DO App",
+                        fontSize = 20.sp
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    OutlinedTextField(
+                        value = nombre,
+                        onValueChange = { nombre = it; showErrorNombre = false },
+                        label = { Text("Nombre") },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Spacer(Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = "Error",
-                            tint = Color.Red,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "El nombre no puede estar vacío",
-                            color = Color.Red,
-                            fontSize = 15.sp
-                        )
-                    }
-                }
-                Spacer(Modifier.height(20.dp))
-                OutlinedTextField(
-                    value = alias,
-                    onValueChange = { alias = it; showErrorAlias=false },
-                    label = {Text("Alias")},
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors()
-                )
-                if (showErrorAlias){
-                    Spacer(Modifier.height(15.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Spacer(Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = "Error",
-                            tint = Color.Red,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "El alias no puede estar vacío",
-                            color = Color.Red,
-                            fontSize = 15.sp
-                        )
-                    }
-                }
-                Spacer(Modifier.height(20.dp))
-                Button(
-                    onClick = {
-                        if(nombre.isBlank() && alias.isBlank()){
-                            showErrorNombre = true
-                            showErrorAlias = true
-                        }else if(nombre.isBlank()) {
-                            showErrorNombre = true
-                        }else if (alias.isBlank()){
-                            showErrorAlias = true
-                        }else {
-                            showErrorNombre = false
-                            showErrorAlias = false
-                            onLogin(nombre, alias)
+                        colors = OutlinedTextFieldDefaults.colors()
+                    )
+                    if (showErrorNombre) {
+                        Spacer(Modifier.height(15.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = "Error",
+                                tint = Color.Red,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "El nombre no puede estar vacío",
+                                color = Color.Red,
+                                fontSize = 15.sp
+                            )
                         }
                     }
-                ) {
-                    Text("Continuar")
+                    Spacer(Modifier.height(20.dp))
+                    OutlinedTextField(
+                        value = alias,
+                        onValueChange = { alias = it; showErrorAlias = false },
+                        label = { Text("Alias") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors()
+                    )
+                    if (showErrorAlias) {
+                        Spacer(Modifier.height(15.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = "Error",
+                                tint = Color.Red,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "El alias no puede estar vacío",
+                                color = Color.Red,
+                                fontSize = 15.sp
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Button(
+                        onClick = {
+                            if (nombre.isBlank() && alias.isBlank()) {
+                                showErrorNombre = true
+                                showErrorAlias = true
+                            } else if (nombre.isBlank()) {
+                                showErrorNombre = true
+                            } else if (alias.isBlank()) {
+                                showErrorAlias = true
+                            } else {
+                                showErrorNombre = false
+                                showErrorAlias = false
+                                onLogin(nombre, alias)
+                            }
+                        }
+                    ) {
+                        Text("Continuar")
+                    }
                 }
             }
         }
