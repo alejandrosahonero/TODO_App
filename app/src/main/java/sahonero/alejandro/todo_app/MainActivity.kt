@@ -51,12 +51,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.res.painterResource
@@ -70,6 +73,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.delay
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -422,6 +426,8 @@ fun AddTaskDialog(
     var nuevaTarea by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableStateOf(0) }
 
+    val focusRequester = remember { FocusRequester() }
+
     Dialog( onDismissRequest = onDismiss ) {
         Surface(
             shape = MaterialTheme.shapes.medium,
@@ -457,15 +463,18 @@ fun AddTaskDialog(
                 TextField(
                     value = nuevaTarea,
                     onValueChange = { nuevaTarea = it },
-                    placeholder = { Text("Comprar patatas")}
+                    placeholder = { Text("Comprar patatas")},
+                    modifier = Modifier.fillMaxWidth()
+                        .focusRequester(focusRequester)
                 )
                 Spacer(Modifier.height(20.dp))
                 Text(
                     text = "Prioridad",
                     fontWeight = FontWeight.Bold
                 )
+                // --- PRIORITIES ---
                 Row(
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().padding(end = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -496,6 +505,11 @@ fun AddTaskDialog(
                 }
             }
         }
+    }
+    // --- FOCUS REQUEST FOR TEXTFIELD ---
+    LaunchedEffect(Unit) {
+        delay(100)
+        focusRequester.requestFocus()
     }
 }
 
