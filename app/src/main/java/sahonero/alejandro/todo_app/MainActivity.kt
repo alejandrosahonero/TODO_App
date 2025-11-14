@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
@@ -37,6 +38,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -234,7 +236,7 @@ fun Login(onLogin: (String, String) -> Unit){
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
-    var nuevaTarea by remember { mutableStateOf("") }
+    var showAddTask by remember { mutableStateOf(false) }
     val listaTareas = remember { mutableStateListOf<String>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
 
@@ -296,6 +298,13 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddTask = true }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Añadir tareas")
+            }
         }
     ) { innerPadding ->
         Column(
@@ -337,31 +346,6 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                 }
                 Spacer(Modifier.height(10.dp))
             }
-            // --- ADD TASK ---
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = nuevaTarea,
-                    onValueChange = { nuevaTarea = it },
-                    label = { Text("¿Qué tienes que hacer $alias?") },
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(),
-                    singleLine = true
-                )
-                Spacer(Modifier.width(10.dp))
-                Button(onClick = {
-                    if (!nuevaTarea.isBlank()) {
-                        listaTareas.add(nuevaTarea)
-                        nuevaTarea = ""
-                    }
-                    searching = false
-                }) {
-                    Text("Añadir")
-                }
-            }
-            Spacer(Modifier.height(10.dp))
             // --- TASKS LIST ---
             LazyColumn(
                 Modifier.fillMaxSize()
@@ -414,6 +398,19 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
             }
         }
     }
+    if(showAddTask){
+        AddTaskDialog(
+            onDismiss = { showAddTask = false },
+            onConfirm = { nuevaTarea ->
+                if (nuevaTarea.isNotBlank()) {
+                    listaTareas.add(nuevaTarea)
+                }
+                searching = false
+                showAddTask = false
+            },
+            alias = alias
+        )
+    }
 }
 
 @Composable
@@ -462,33 +459,40 @@ fun AddTaskDialog(
                     onValueChange = { nuevaTarea = it },
                     placeholder = { Text("Comprar patatas")}
                 )
+                Spacer(Modifier.height(20.dp))
                 Text(
                     text = "Prioridad",
                     fontWeight = FontWeight.Bold
                 )
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // High priority
-                    RadioButton(
-                        selected = selectedPriority == 3,
-                        onClick = { selectedPriority = 3}
-                    )
-                    Text("Alta")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = selectedPriority == 3,
+                            onClick = { selectedPriority = 3}
+                        )
+                        Text("Alta")
+                    }
                     // Medium priority
-                    RadioButton(
-                        selected = selectedPriority == 2,
-                        onClick = { selectedPriority = 2}
-                    )
-                    Text("Media")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = selectedPriority == 2,
+                            onClick = { selectedPriority = 2}
+                        )
+                        Text("Media")
+                    }
                     // Low priority
-                    RadioButton(
-                        selected = selectedPriority == 1,
-                        onClick = { selectedPriority = 1}
-                    )
-                    Text("Baja")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = selectedPriority == 1,
+                            onClick = { selectedPriority = 1}
+                        )
+                        Text("Baja")
+                    }
                 }
             }
         }
