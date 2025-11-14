@@ -5,6 +5,7 @@ import android.renderscript.RenderScript
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -50,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -246,7 +248,6 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     val listaTareas = remember { mutableStateListOf<String>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
 
-    var searching by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
     var expanded by remember { mutableStateOf(false) }
@@ -261,15 +262,6 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                     )
                 },
                 actions = {
-                    // --- SEARCH ICON ---
-                    IconButton(
-                        onClick = { searching = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search"
-                        )
-                    }
                     // --- MENU ---
                     IconButton(
                         onClick = { expanded = true },
@@ -325,33 +317,21 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
             )
             Spacer(Modifier.height(10.dp))
             // --- SEARCH BAR ---
-            if(searching) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        label = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Buscar"
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text("Busca algo")
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(),
-                        singleLine = true
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Buscar"
                     )
-                }
-                Spacer(Modifier.height(10.dp))
-            }
+                },
+                placeholder = { Text("Busca algo") },
+                label = null,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(Modifier.height(10.dp))
             // --- TASKS LIST ---
             LazyColumn(
                 Modifier.fillMaxSize()
@@ -411,7 +391,6 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                 if (nuevaTarea.isNotBlank()) {
                     listaTareas.add(nuevaTarea)
                 }
-                searching = false
                 showAddTask = false
             },
             alias = alias
@@ -476,7 +455,8 @@ fun AddTaskDialog(
                 )
                 // --- PRIORITIES ---
                 Row(
-                    Modifier.fillMaxWidth().padding(end = 14.dp),
+                    Modifier.fillMaxWidth()
+                        .padding(end = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -520,7 +500,7 @@ fun AddTaskDialog(
 fun GreetingPreview() {
     TODOAppTheme {
         //Login ( onLogin = {} )
-        //Tasks( "Alejandro", "ale", onBack = {})
-        AddTaskDialog( onDismiss = {}, onConfirm = {}, "ale")
+        Tasks( "Alejandro", "ale", onBack = {})
+        //AddTaskDialog( onDismiss = {}, onConfirm = {}, "ale")
     }
 }
