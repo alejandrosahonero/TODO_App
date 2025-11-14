@@ -248,10 +248,15 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     val listaTareas = remember { mutableStateListOf<String>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
 
-    var searchQuery by remember { mutableStateOf("") }
-
     var expanded by remember { mutableStateOf(false) }
     val opcionesMenu = listOf("Preferencias")
+
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredTasks = if (searchQuery.isBlank()) {
+        listaTareas
+    } else {
+        listaTareas.filter { it.contains(searchQuery, ignoreCase = true) }
+    }
 
     Scaffold(
         topBar = {
@@ -329,6 +334,12 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                 placeholder = { Text("Busca algo") },
                 label = null,
                 modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    errorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
                 singleLine = true
             )
             Spacer(Modifier.height(10.dp))
@@ -336,7 +347,7 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
             LazyColumn(
                 Modifier.fillMaxSize()
             ) {
-                items(listaTareas) { tarea ->
+                items(filteredTasks) { tarea ->
 
                     val isCompleted = tareasCompletadas.contains(tarea)
 
