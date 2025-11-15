@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -269,39 +270,14 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                     )
                 },
                 actions = {
-                    // --- MENU ---
-                    IconButton(
-                        onClick = { expanded = true },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "Menu"
-                        )
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            opcionesMenu.forEach { opcion ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(
-                                            Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Settings,
-                                                contentDescription = "Preferencias"
-                                            )
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(opcion)
-                                        }
-                                    },
-                                    onClick = {}
-                                )
-                            }
-                        }
-                    }
-                }
+                    VerticalMenu(
+                        expanded = expanded,
+                        opcionesMenu = opcionesMenu,
+                        onExpand = { expanded = true },
+                        onDismiss = { expanded = false }
+                    )
+                },
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp)
             )
         },
         floatingActionButton = {
@@ -348,6 +324,42 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
             },
             alias = alias
         )
+    }
+}
+
+@Composable
+fun VerticalMenu(expanded: Boolean, opcionesMenu: List<String>, onExpand: () -> Unit, onDismiss: () -> Unit){
+    // --- MENU ---
+    IconButton(
+        onClick = onExpand,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.MoreVert,
+            contentDescription = "Menu"
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismiss
+        ) {
+            opcionesMenu.forEach { opcion ->
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = "Preferencias"
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(opcion)
+                        }
+                    },
+                    onClick = onDismiss
+                )
+            }
+        }
     }
 }
 
