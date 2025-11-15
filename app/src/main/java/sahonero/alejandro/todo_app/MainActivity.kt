@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -54,6 +55,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -322,77 +324,17 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
             )
             Spacer(Modifier.height(10.dp))
             // --- SEARCH BAR ---
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Buscar"
-                    )
-                },
-                placeholder = { Text("Busca algo") },
-                label = null,
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    errorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                ),
-                singleLine = true
+            SearchBar(
+                searchQuery = searchQuery,
+                onValueChange = { newValue -> searchQuery = newValue }
             )
             Spacer(Modifier.height(10.dp))
             // --- TASKS LIST ---
-            LazyColumn(
-                Modifier.fillMaxSize()
-            ) {
-                items(filteredTasks) { tarea ->
-
-                    val isCompleted = tareasCompletadas.contains(tarea)
-
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = 20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Checkbox(
-                                checked = isCompleted,
-                                onCheckedChange = { nuevoValor ->
-                                    if (nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(
-                                        tarea
-                                    )
-                                }
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = tarea,
-                                fontSize = 15.sp,
-                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                listaTareas.remove(tarea)
-                                tareasCompletadas.remove(tarea)
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = "Borrar tarea",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    HorizontalDivider()
-                }
-            }
+            TaskList(
+                filteredTasks = filteredTasks,
+                listaTareas = listaTareas,
+                tareasCompletadas = tareasCompletadas
+            )
         }
     }
     if(showAddTask){
@@ -409,6 +351,81 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     }
 }
 
+@Composable
+fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onValueChange,
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Buscar"
+            )
+        },
+        placeholder = { Text("Busca algo") },
+        label = null,
+        modifier = Modifier.fillMaxWidth(),
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            errorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
+        singleLine = true
+    )
+}
+@Composable
+fun TaskList( filteredTasks: List<String>, listaTareas: MutableList<String>, tareasCompletadas: MutableList<String>){
+    LazyColumn(
+        Modifier.fillMaxSize()
+    ) {
+        items(filteredTasks) { tarea ->
+
+            val isCompleted = tareasCompletadas.contains(tarea)
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Checkbox(
+                        checked = isCompleted,
+                        onCheckedChange = { nuevoValor ->
+                            if (nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(
+                                tarea
+                            )
+                        }
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = tarea,
+                        fontSize = 15.sp,
+                        textDecoration = if (isCompleted) TextDecoration.LineThrough else null
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        listaTareas.remove(tarea)
+                        tareasCompletadas.remove(tarea)
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Borrar tarea",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            HorizontalDivider()
+        }
+    }
+}
 @Composable
 fun AddTaskDialog(
     onDismiss: () -> Unit,
@@ -460,11 +477,11 @@ fun AddTaskDialog(
                         .focusRequester(focusRequester)
                 )
                 Spacer(Modifier.height(20.dp))
+                // --- PRIORITIES ---
                 Text(
                     text = "Prioridad",
                     fontWeight = FontWeight.Bold
                 )
-                // --- PRIORITIES ---
                 Row(
                     Modifier.fillMaxWidth()
                         .padding(end = 14.dp),
@@ -477,7 +494,7 @@ fun AddTaskDialog(
                             selected = selectedPriority == 3,
                             onClick = { selectedPriority = 3}
                         )
-                        Text("Alta")
+                        Text("Alta", modifier = Modifier.clickable{ selectedPriority = 3})
                     }
                     // Medium priority
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -485,7 +502,7 @@ fun AddTaskDialog(
                             selected = selectedPriority == 2,
                             onClick = { selectedPriority = 2}
                         )
-                        Text("Media")
+                        Text("Media", modifier = Modifier.clickable{ selectedPriority = 2})
                     }
                     // Low priority
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -493,7 +510,7 @@ fun AddTaskDialog(
                             selected = selectedPriority == 1,
                             onClick = { selectedPriority = 1}
                         )
-                        Text("Baja")
+                        Text("Baja", modifier = Modifier.clickable{ selectedPriority = 1})
                     }
                 }
             }
