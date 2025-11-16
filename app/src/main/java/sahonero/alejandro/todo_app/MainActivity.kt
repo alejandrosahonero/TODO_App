@@ -388,53 +388,66 @@ fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
 }
 @Composable
 fun TaskList( filteredTasks: List<String>, listaTareas: MutableList<String>, tareasCompletadas: MutableList<String>){
-    LazyColumn(
-        Modifier.fillMaxSize()
+    Box(
+        Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
-        items(filteredTasks) { tarea ->
+        // --- LIST ---
+        LazyColumn(
+            Modifier.fillMaxSize()
+        ) {
+            items(filteredTasks) { tarea ->
 
-            val isCompleted = tareasCompletadas.contains(tarea)
+                val isCompleted = tareasCompletadas.contains(tarea)
 
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(
-                        checked = isCompleted,
-                        onCheckedChange = { nuevoValor ->
-                            if (nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(
-                                tarea
-                            )
-                        }
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = tarea,
-                        fontSize = 15.sp,
-                        textDecoration = if (isCompleted) TextDecoration.LineThrough else null
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        listaTareas.remove(tarea)
-                        tareasCompletadas.remove(tarea)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Checkbox(
+                            checked = isCompleted,
+                            onCheckedChange = { nuevoValor ->
+                                if (nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(
+                                    tarea
+                                )
+                            }
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = tarea,
+                            fontSize = 15.sp,
+                            textDecoration = if (isCompleted) TextDecoration.LineThrough else null
+                        )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Borrar tarea",
-                        modifier = Modifier.size(20.dp)
-                    )
+                    IconButton(
+                        onClick = {
+                            listaTareas.remove(tarea)
+                            tareasCompletadas.remove(tarea)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Borrar tarea",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
+                HorizontalDivider()
             }
-            HorizontalDivider()
+        }
+        if(listaTareas.isEmpty()){
+            Text(
+                text = "¡Anímate a añadir una tarea!",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
