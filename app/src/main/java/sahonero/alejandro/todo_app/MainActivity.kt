@@ -282,7 +282,6 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = "¡Qué tal $nombre!",
-                        modifier = Modifier.padding(top = 12.dp)
                     )
                     Text(
                         text = if (listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else if (listaTareas.size < 4) "¡TE QUEDA POCO!" else "¡HAY MUCHO POR HACER!",
@@ -332,6 +331,7 @@ fun VerticalMenu(expanded: Boolean, opcionesMenu: List<String>, onExpand: () -> 
     // --- MENU ---
     IconButton(
         onClick = onExpand,
+        modifier = Modifier.size(30.dp)
     ) {
         Icon(
             imageVector = Icons.Filled.MoreVert,
