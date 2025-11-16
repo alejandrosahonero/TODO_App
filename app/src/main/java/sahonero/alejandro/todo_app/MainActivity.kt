@@ -18,11 +18,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -262,24 +264,6 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "¡Qué tal $nombre!"
-                    )
-                },
-                actions = {
-                    VerticalMenu(
-                        expanded = expanded,
-                        opcionesMenu = opcionesMenu,
-                        onExpand = { expanded = true },
-                        onDismiss = { expanded = false }
-                    )
-                },
-                modifier = Modifier.padding(start = 8.dp, end = 8.dp)
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddTask = true }
@@ -291,13 +275,29 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
         Column(
             Modifier.fillMaxSize()
                 .padding(innerPadding)
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp)
+                .padding(20.dp)
         ) {
             // --- WELCOME ---
-            Text(
-                text = if (listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else "HAY MUCHO POR HACER!",
-                fontSize = 25.sp
-            )
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "¡Qué tal $nombre!",
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                    Text(
+                        text = if (listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else if (listaTareas.size < 4) "¡TE QUEDA POCO!" else "¡HAY MUCHO POR HACER!",
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 40.sp
+                    )
+                }
+                VerticalMenu(
+                    expanded = expanded,
+                    opcionesMenu = opcionesMenu,
+                    onExpand = { expanded = true },
+                    onDismiss = { expanded = false }
+                )
+            }
             Spacer(Modifier.height(10.dp))
             // --- SEARCH BAR ---
             SearchBar(
