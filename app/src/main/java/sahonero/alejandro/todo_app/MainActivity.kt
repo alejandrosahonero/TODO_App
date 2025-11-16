@@ -61,6 +61,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -70,6 +71,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -234,7 +236,7 @@ fun Login(onLogin: (String, String) -> Unit){
                             } else {
                                 showErrorNombre = false
                                 showErrorAlias = false
-                                onLogin(nombre, alias)
+                                onLogin(nombre.trim(), alias.trim())
                             }
                         }
                     ) {
@@ -250,7 +252,7 @@ fun Login(onLogin: (String, String) -> Unit){
 @Composable
 fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     var showAddTask by remember { mutableStateOf(false) }
-    val listaTareas = remember { mutableStateListOf<String>() }
+    val listaTareas = remember { mutableStateMapOf<String, Int>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
 
     var expanded by remember { mutableStateOf(false) }
@@ -260,7 +262,9 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     val filteredTasks = if (searchQuery.isBlank()) {
         listaTareas
     } else {
-        listaTareas.filter { it.contains(searchQuery, ignoreCase = true) }
+        listaTareas.filter { (tarea, _) ->
+            tarea.contains(searchQuery, ignoreCase = true)
+        }
     }
 
     Scaffold(
@@ -273,7 +277,8 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
         }
     ) { innerPadding ->
         Column(
-            Modifier.fillMaxSize()
+            Modifier
+                .fillMaxSize()
                 .padding(innerPadding)
                 .padding(20.dp)
         ) {
@@ -315,9 +320,9 @@ fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
     if(showAddTask){
         AddTaskDialog(
             onDismiss = { showAddTask = false },
-            onConfirm = { nuevaTarea ->
+            onConfirm = { nuevaTarea, prioridad ->
                 if (nuevaTarea.isNotBlank()) {
-                    listaTareas.add(nuevaTarea)
+                    listaTareas[nuevaTarea] = prioridad
                 }
                 showAddTask = false
             },
@@ -387,7 +392,7 @@ fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
     )
 }
 @Composable
-fun TaskList( filteredTasks: List<String>, listaTareas: MutableList<String>, tareasCompletadas: MutableList<String>){
+fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, Int>, tareasCompletadas: MutableList<String>){
     Box(
         Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -396,7 +401,7 @@ fun TaskList( filteredTasks: List<String>, listaTareas: MutableList<String>, tar
         LazyColumn(
             Modifier.fillMaxSize()
         ) {
-            items(filteredTasks) { tarea ->
+            items(filteredTasks.toList()) { (tarea, prioridad) ->
 
                 val isCompleted = tareasCompletadas.contains(tarea)
 
@@ -420,11 +425,33 @@ fun TaskList( filteredTasks: List<String>, listaTareas: MutableList<String>, tar
                             }
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = tarea,
-                            fontSize = 15.sp,
-                            textDecoration = if (isCompleted) TextDecoration.LineThrough else null
-                        )
+                        Column() {
+                            Text(
+                                text = tarea,
+                                fontSize = 15.sp,
+                                color = if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                lineHeight = 8.sp
+                            )
+                            Text(
+                                text = when(prioridad){
+                                    1 -> "Baja"
+                                    2 -> "Media"
+                                    3 -> "Alta"
+                                    else -> "Sin prioridad"
+                                },
+                                color = when(prioridad){
+                                    1 -> Color.Green
+                                    2 -> Color.Yellow
+                                    3 -> Color.Red
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                     IconButton(
                         onClick = {
@@ -454,7 +481,7 @@ fun TaskList( filteredTasks: List<String>, listaTareas: MutableList<String>, tar
 @Composable
 fun AddTaskDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
+    onConfirm: (String, Int) -> Unit,
     alias: String
 ){
     var nuevaTarea by remember { mutableStateOf("") }
@@ -481,7 +508,7 @@ fun AddTaskDialog(
                         )
                     }
                     TextButton(
-                        onClick = { if (nuevaTarea.isNotBlank()) onConfirm(nuevaTarea) },
+                        onClick = { if (nuevaTarea.isNotBlank()) onConfirm(nuevaTarea, selectedPriority) },
                         enabled = nuevaTarea.isNotBlank()
                     ) {
                         Text("Listo")
@@ -498,7 +525,8 @@ fun AddTaskDialog(
                     value = nuevaTarea,
                     onValueChange = { nuevaTarea = it },
                     placeholder = { Text("Comprar patatas")},
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .focusRequester(focusRequester)
                 )
                 Spacer(Modifier.height(20.dp))
@@ -508,7 +536,8 @@ fun AddTaskDialog(
                     fontWeight = FontWeight.Bold
                 )
                 Row(
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .padding(end = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
