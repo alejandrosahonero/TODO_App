@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -388,6 +389,7 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // --- CHECKBOX AND TASK ---
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -397,12 +399,11 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                         Checkbox(
                             checked = isCompleted,
                             onCheckedChange = { nuevoValor ->
-                                if (nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(
-                                    tarea
-                                )
+                                if (nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(tarea)
                             }
                         )
                         Spacer(Modifier.width(4.dp))
+                        // --- DESCRIPTION AND PRIORITY ---
                         Column {
                             Text(
                                 text = tarea,
@@ -430,6 +431,7 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                             )
                         }
                     }
+                    // --- DELETE BUTTON ---
                     IconButton(
                         onClick = {
                             listaTareas.remove(tarea)
@@ -446,6 +448,7 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                 }
             }
         }
+        // --- ADVICE MESSAGE ---
         if(listaTareas.isEmpty()){
             Text(
                 text = "¡Anímate a añadir una tarea!",
@@ -550,6 +553,18 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias
     }
 }
 
+@Composable
+fun RemoveTaskDialog(){
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("¡Cuidado!") },
+        text = { Text("¿Estas seguro que deseas borrar esta tarea?") },
+        shape = MaterialTheme.shapes.medium,
+        confirmButton = { Text("Borrar") },
+        dismissButton = { Text("Cancelar") }
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
@@ -557,5 +572,6 @@ fun GreetingPreview() {
         //Login ( onLogin = {} )
         //Tasks( "Alejandro", "ale", onBack = {})
         //AddTaskDialog( onDismiss = {}, onConfirm = {}, "ale")
+        RemoveTaskDialog()
     }
 }
