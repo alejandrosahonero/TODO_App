@@ -1,12 +1,10 @@
 package sahonero.alejandro.todo_app
 
 import android.os.Bundle
-import android.renderscript.RenderScript
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,22 +15,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -46,23 +39,19 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -73,7 +62,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -126,8 +114,7 @@ fun AppNavigation() {
 
             Tasks(
                 nombre = nombre,
-                alias = alias,
-                onBack = { navController.popBackStack() }
+                alias = alias
             )
         }
     }
@@ -156,6 +143,7 @@ fun Login(onLogin: (String, String) -> Unit){
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    // --- APP ICON ---
                     Icon(
                         painter = painterResource(R.drawable.todo_logo),
                         contentDescription = "Logo de la app",
@@ -163,40 +151,21 @@ fun Login(onLogin: (String, String) -> Unit){
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(20.dp))
+                    // --- APP TITLE ---
                     Text(
                         text = "TO-DO App",
                         fontSize = 20.sp
                     )
                     Spacer(Modifier.height(20.dp))
+                    // --- FIELDS ---
                     OutlinedTextField(
                         value = nombre,
                         onValueChange = { nombre = it; showErrorNombre = false },
                         label = { Text("Nombre") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors()
+                        isError = showErrorNombre
                     )
-                    if (showErrorNombre) {
-                        Spacer(Modifier.height(15.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Outlined.Info,
-                                contentDescription = "Error",
-                                tint = Color.Red,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "El nombre no puede estar vacío",
-                                color = Color.Red,
-                                fontSize = 15.sp
-                            )
-                        }
-                    }
                     Spacer(Modifier.height(20.dp))
                     OutlinedTextField(
                         value = alias,
@@ -204,10 +173,10 @@ fun Login(onLogin: (String, String) -> Unit){
                         label = { Text("Alias") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors()
+                        isError = showErrorAlias
                     )
-                    if (showErrorAlias) {
-                        Spacer(Modifier.height(15.dp))
+                    if(showErrorNombre || showErrorAlias){
+                        Spacer(Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -216,18 +185,19 @@ fun Login(onLogin: (String, String) -> Unit){
                             Icon(
                                 imageVector = Icons.Outlined.Info,
                                 contentDescription = "Error",
-                                tint = Color.Red,
+                                tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                text = "El alias no puede estar vacío",
-                                color = Color.Red,
+                                text = "Debe completar ambos campos",
+                                color = MaterialTheme.colorScheme.error,
                                 fontSize = 15.sp
                             )
                         }
                     }
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(10.dp))
+                    // --- LOGIN BUTTON ---
                     Button(
                         onClick = {
                             if (nombre.isBlank() && alias.isBlank()) {
@@ -254,7 +224,7 @@ fun Login(onLogin: (String, String) -> Unit){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Tasks(nombre: String, alias: String, onBack: () -> Unit){
+fun Tasks(nombre: String, alias: String){
     var showAddTask by remember { mutableStateOf(false) }
     val listaTareas = remember { mutableStateMapOf<String, Int>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
@@ -410,7 +380,8 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                 val isCompleted = tareasCompletadas.contains(tarea)
 
                 Row(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(top = 20.dp)
                         .clip(MaterialTheme.shapes.medium)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
@@ -419,7 +390,9 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f).padding(top = 10.dp, bottom = 10.dp, start = 10.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(top = 10.dp, bottom = 10.dp, start = 10.dp)
                     ) {
                         Checkbox(
                             checked = isCompleted,
@@ -430,14 +403,13 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                             }
                         )
                         Spacer(Modifier.width(4.dp))
-                        Column() {
+                        Column {
                             Text(
                                 text = tarea,
                                 fontSize = 15.sp,
                                 color = if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                                 fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
-                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
-                                lineHeight = 8.sp
+                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null
                             )
                             Text(
                                 text = when(prioridad){
@@ -484,13 +456,9 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
     }
 }
 @Composable
-fun AddTaskDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (String, Int) -> Unit,
-    alias: String
-){
+fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias: String){
     var nuevaTarea by remember { mutableStateOf("") }
-    var selectedPriority by remember { mutableStateOf(0) }
+    var selectedPriority by remember { mutableIntStateOf(0) }
 
     val focusRequester = remember { FocusRequester() }
 
