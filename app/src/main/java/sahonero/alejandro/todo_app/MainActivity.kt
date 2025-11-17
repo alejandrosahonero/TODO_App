@@ -5,6 +5,7 @@ import android.renderscript.RenderScript
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -51,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,6 +69,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -406,15 +410,16 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                 val isCompleted = tareasCompletadas.contains(tarea)
 
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 20.dp),
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(top = 20.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).padding(top = 10.dp, bottom = 10.dp, start = 10.dp)
                     ) {
                         Checkbox(
                             checked = isCompleted,
@@ -457,7 +462,8 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                         onClick = {
                             listaTareas.remove(tarea)
                             tareasCompletadas.remove(tarea)
-                        }
+                        },
+                        modifier = Modifier.padding(end = 10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
@@ -466,7 +472,6 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                         )
                     }
                 }
-                HorizontalDivider()
             }
         }
         if(listaTareas.isEmpty()){
@@ -582,7 +587,7 @@ fun AddTaskDialog(
 fun GreetingPreview() {
     TODOAppTheme {
         //Login ( onLogin = {} )
-        Tasks( "Alejandro", "ale", onBack = {})
+        //Tasks( "Alejandro", "ale", onBack = {})
         //AddTaskDialog( onDismiss = {}, onConfirm = {}, "ale")
     }
 }
