@@ -1,9 +1,16 @@
 package sahonero.alejandro.todo_app
 
+import android.content.pm.PackageManager
+import android.Manifest
+import android.content.Context
+import android.os.Build
+import kotlinx.coroutines.delay
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,12 +64,14 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -70,12 +79,19 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.app.NotificationChannelCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -112,6 +128,8 @@ fun AppNavigation() {
         ){ backStackEntry ->
             val nombre = backStackEntry.arguments?.getString("nombre")!!
             val alias = backStackEntry.arguments?.getString("alias")!!
+
+            setAlias(alias)
 
             Tasks(
                 nombre = nombre,
@@ -226,19 +244,32 @@ fun Login(onLogin: (String, String) -> Unit){
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Tasks(nombre: String, alias: String){
+    // --- TASKS ---
     var showAddTask by remember { mutableStateOf(false) }
     val listaTareas = remember { mutableStateMapOf<String, Int>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
-
+    // --- DROPDOWN MENU ---
     var expanded by remember { mutableStateOf(false) }
     val opcionesMenu = listOf("Preferencias")
-
+    // --- SEARCH ---
     var searchQuery by remember { mutableStateOf("") }
     val filteredTasks = if (searchQuery.isBlank()) {
         listaTareas
     } else {
         listaTareas.filter { (tarea, _) ->
             tarea.contains(searchQuery, ignoreCase = true)
+        }
+    }
+    // --- NOTIFICATIONS ---
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var lastTaskTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    // For API 33+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if(isGranted){
+
         }
     }
 
@@ -292,17 +323,42 @@ fun Tasks(nombre: String, alias: String){
             )
         }
     }
+    // --- ADD TASK DIALOG ---
     if(showAddTask){
         AddTaskDialog(
             onDismiss = { showAddTask = false },
             onConfirm = { nuevaTarea, prioridad ->
                 if (nuevaTarea.isNotBlank()) {
                     listaTareas[nuevaTarea] = prioridad
+                    lastTaskTime = System.currentTimeMillis()
                 }
                 showAddTask = false
             },
             alias = alias
         )
+    }
+    // --- PERMISSION CHECK ---
+    LaunchedEffect(Unit) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            if(ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED){
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        createNotificationsChannel(context)
+    }
+    // --- INACTIVITY TIMER ---
+    LaunchedEffect(lastTaskTime) {
+        // Cancelar el anterior y empezar un nuevo job
+        val job: Job = scope.launch {
+            delay(3 * 60 * 1000L)
+            sendInactivityNotification(context)
+        }
+        // Limpiar el job al salir
+        job.invokeOnCompletion {
+            if( it is CancellationException){
+
+            }
+        }
     }
 }
 
@@ -574,22 +630,66 @@ fun RemoveTaskDialog(onConfirm: () -> Unit, onDismiss: () -> Unit){
         text = { Text("¿Estas seguro que deseas borrar esta tarea?") },
         shape = MaterialTheme.shapes.medium,
         confirmButton = {
-            Button(
-                onClick = onConfirm
-            ) {
-                Text("Borrar")
+            TextButton( onClick = onConfirm ) {
+                Text("Borrar", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            Button(
-                onClick = onDismiss
-            ) {
+            TextButton( onClick = onDismiss ) {
                 Text("Cancelar")
             }
         }
     )
 }
 
+// --- INACTIVITY NOTIFICATION FUNCTIONALLITY ---
+private const val CHANNEL_ID = "inactivity_channel"
+private const val NOTIFICATION_ID= 1
+private var alias = ""
+
+// --- NOTIFICATION CHANNEL ---
+fun createNotificationsChannel(context: Context){
+    val name = "Recordatorios de tareas"
+    val description = "Recordatorios por inactividad"
+
+    val importance = NotificationManagerCompat.IMPORTANCE_MAX
+
+    val channel = NotificationChannelCompat.Builder(CHANNEL_ID, importance).apply {
+        setName(name)
+        setDescription(description)
+        setVibrationEnabled(true)
+    }.build()
+
+    NotificationManagerCompat.from(context).createNotificationChannel(channel)
+}
+
+// --- SEND INACTIVITY NOTIFICATION ---
+fun sendInactivityNotification(context: Context){
+    // Comporbamos el permiso
+    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+        if(ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED){
+            return //No envia si no hay permisos
+        }
+    }
+    //Construir la notificacion
+    val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        .setSmallIcon(R.drawable.check_applogo)
+        .setContentTitle("Hola $alias")
+        .setContentText("Hace tiempo que no añades una tarea")
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setAutoCancel(true)
+        .setDefaults(NotificationCompat.DEFAULT_ALL)
+        .build()
+
+    NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+}
+
+fun getAlias(): String{
+    return alias
+}
+fun setAlias(nAlias: String){
+    alias = nAlias
+}
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
