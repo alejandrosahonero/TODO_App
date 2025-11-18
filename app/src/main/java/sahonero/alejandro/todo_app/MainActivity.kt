@@ -368,6 +368,9 @@ fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
 }
 @Composable
 fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, Int>, tareasCompletadas: MutableList<String>){
+    var showRemoveDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf("") }
+
     Box(
         Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -434,8 +437,8 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                     // --- DELETE BUTTON ---
                     IconButton(
                         onClick = {
-                            listaTareas.remove(tarea)
-                            tareasCompletadas.remove(tarea)
+                            taskToDelete = tarea
+                            showRemoveDialog = true
                         },
                         modifier = Modifier.padding(end = 10.dp)
                     ) {
@@ -456,6 +459,16 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+    if(showRemoveDialog){
+        RemoveTaskDialog(
+            onConfirm = {
+                listaTareas.remove(taskToDelete)
+                tareasCompletadas.remove(taskToDelete)
+                showRemoveDialog = false
+            },
+            onDismiss = { showRemoveDialog = false }
+        )
     }
 }
 @Composable
@@ -554,14 +567,26 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias
 }
 
 @Composable
-fun RemoveTaskDialog(){
+fun RemoveTaskDialog(onConfirm: () -> Unit, onDismiss: () -> Unit){
     AlertDialog(
-        onDismissRequest = {},
+        onDismissRequest = onDismiss,
         title = { Text("¡Cuidado!") },
         text = { Text("¿Estas seguro que deseas borrar esta tarea?") },
         shape = MaterialTheme.shapes.medium,
-        confirmButton = { Text("Borrar") },
-        dismissButton = { Text("Cancelar") }
+        confirmButton = {
+            Button(
+                onClick = onConfirm
+            ) {
+                Text("Borrar")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss
+            ) {
+                Text("Cancelar")
+            }
+        }
     )
 }
 
@@ -572,6 +597,5 @@ fun GreetingPreview() {
         //Login ( onLogin = {} )
         //Tasks( "Alejandro", "ale", onBack = {})
         //AddTaskDialog( onDismiss = {}, onConfirm = {}, "ale")
-        RemoveTaskDialog()
     }
 }
