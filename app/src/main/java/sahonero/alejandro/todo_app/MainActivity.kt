@@ -13,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -34,7 +35,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
@@ -54,10 +57,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -89,8 +95,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
 
@@ -99,7 +105,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            TODOAppTheme{
+            TODOAppTheme(
+                darkTheme = TodoPreferences.getTheme(LocalContext.current).collectAsState(initial = isSystemInDarkTheme()).value
+            ){
                 AppNavigation()
             }
         }
@@ -244,13 +252,15 @@ fun Login(onLogin: (String, String) -> Unit){
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Tasks(nombre: String, alias: String){
+    // --- PREFERENCES ---
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var selectedColor = TodoPreferences.getColor(context).collectAsState(initial = "Default")
+    var selectedTheme = TodoPreferences.getTheme(context).collectAsState(initial = true)
     // --- TASKS ---
     var showAddTask by remember { mutableStateOf(false) }
     val listaTareas = remember { mutableStateMapOf<String, Int>() }
     val tareasCompletadas = remember { mutableStateListOf<String>() }
-    // --- DROPDOWN MENU ---
-    var expanded by remember { mutableStateOf(false) }
-    val opcionesMenu = listOf("Preferencias")
     // --- SEARCH ---
     var searchQuery by remember { mutableStateOf("") }
     val filteredTasks = if (searchQuery.isBlank()) {
@@ -261,17 +271,9 @@ fun Tasks(nombre: String, alias: String){
         }
     }
     // --- NOTIFICATIONS ---
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var lastTaskTime by remember { mutableStateOf(System.currentTimeMillis()) }
     // For API 33+
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if(isGranted){
-
-        }
-    }
+    val permissionLauncher = rememberLauncherForActivityResult( contract = ActivityResultContracts.RequestPermission() ){}
 
     Scaffold(
         floatingActionButton = {
@@ -288,8 +290,9 @@ fun Tasks(nombre: String, alias: String){
                 .padding(innerPadding)
                 .padding(20.dp)
         ) {
-            // --- WELCOME ---
+            // --- TOP APP BAR ---
             Row(Modifier.fillMaxWidth()) {
+                // --- WELCOME ---
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = "¡Qué tal $nombre!",
@@ -301,11 +304,12 @@ fun Tasks(nombre: String, alias: String){
                         lineHeight = 40.sp
                     )
                 }
+                // --- MENU ---
                 VerticalMenu(
-                    expanded = expanded,
-                    opcionesMenu = opcionesMenu,
-                    onExpand = { expanded = true },
-                    onDismiss = { expanded = false }
+                    selectedTheme = selectedTheme,
+                    selectedColor = selectedColor,
+                    context = context,
+                    scope = scope
                 )
             }
             Spacer(Modifier.height(10.dp))
@@ -319,7 +323,8 @@ fun Tasks(nombre: String, alias: String){
             TaskList(
                 filteredTasks = filteredTasks,
                 listaTareas = listaTareas,
-                tareasCompletadas = tareasCompletadas
+                tareasCompletadas = tareasCompletadas,
+                selectedColor = selectedColor
             )
         }
     }
@@ -349,24 +354,18 @@ fun Tasks(nombre: String, alias: String){
     // --- INACTIVITY TIMER ---
     LaunchedEffect(lastTaskTime) {
         // Cancelar el anterior y empezar un nuevo job
-        val job: Job = scope.launch {
-            delay(3 * 60 * 1000L)
-            sendInactivityNotification(context)
-        }
-        // Limpiar el job al salir
-        job.invokeOnCompletion {
-            if( it is CancellationException){
-
-            }
-        }
+        delay(3 * 60 * 1000L)
+        sendInactivityNotification(context)
     }
 }
 
 @Composable
-fun VerticalMenu(expanded: Boolean, opcionesMenu: List<String>, onExpand: () -> Unit, onDismiss: () -> Unit){
+fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, context: Context, scope: CoroutineScope){
+    var expanded by remember { mutableStateOf(false) }
+    var showPreferencesDialog by remember { mutableStateOf(false) }
     // --- MENU ---
     IconButton(
-        onClick = onExpand,
+        onClick = { expanded = true },
         modifier = Modifier.size(30.dp)
     ) {
         Icon(
@@ -375,27 +374,37 @@ fun VerticalMenu(expanded: Boolean, opcionesMenu: List<String>, onExpand: () -> 
         )
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = onDismiss
+            onDismissRequest = { expanded = false }
         ) {
-            opcionesMenu.forEach { opcion ->
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = "Preferencias"
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(opcion)
-                        }
-                    },
-                    onClick = onDismiss
-                )
-            }
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "Preferencias"
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Preferencias")
+                    }
+                },
+                onClick = {
+                    showPreferencesDialog = true
+                    expanded = false
+                }
+            )
         }
+    }
+    if (showPreferencesDialog){
+        PreferencesDialog(
+            selectedTheme = selectedTheme,
+            selectedColor = selectedColor,
+            context = context,
+            scope = scope,
+            onDismiss = { showPreferencesDialog = false }
+        )
     }
 }
 
@@ -423,7 +432,7 @@ fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
     )
 }
 @Composable
-fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, Int>, tareasCompletadas: MutableList<String>){
+fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, Int>, tareasCompletadas: MutableList<String>, selectedColor: State<String>){
     var showRemoveDialog by remember { mutableStateOf(false) }
     var taskToDelete by remember { mutableStateOf("") }
 
@@ -467,7 +476,12 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                             Text(
                                 text = tarea,
                                 fontSize = 15.sp,
-                                color = if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                color = when(selectedColor.value){
+                                    "Rojo" -> Color.Red
+                                    "Verde" -> Color.Green
+                                    "Azul" -> Color.Blue
+                                    else -> if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                                },
                                 fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
                                 textDecoration = if (isCompleted) TextDecoration.LineThrough else null
                             )
@@ -642,10 +656,78 @@ fun RemoveTaskDialog(onConfirm: () -> Unit, onDismiss: () -> Unit){
     )
 }
 
+@Composable
+fun PreferencesDialog(selectedTheme: State<Boolean>, selectedColor: State<String>, context: Context, scope: CoroutineScope, onDismiss: () -> Unit){
+    val textColor = listOf("Defecto", "Rojo", "Verde", "Azul")
+    Dialog( onDismissRequest = onDismiss ) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                // --- LIGHT/DARK THEME ---
+                Text(
+                    text = "Tema de la Aplicación",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Spacer(Modifier.height(15.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.LightMode,
+                        contentDescription = "Modo claro",
+                        modifier = Modifier.size(30.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Switch(
+                        checked = selectedTheme.value,
+                        onCheckedChange = { newValue ->
+                            scope.launch {
+                                TodoPreferences.setTheme(context, newValue)
+                            }
+                        }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Filled.Nightlight,
+                        contentDescription = "Modo oscuro",
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+                // --- TEXT COLOR ---
+                Text(
+                    text = "Color de las tareas",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Spacer(Modifier.height(10.dp))
+                textColor.forEach { taskColor ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedColor.value == taskColor,
+                            onClick = {
+                                scope.launch {
+                                    TodoPreferences.setColor(context, taskColor)
+                                }
+                            }
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(taskColor)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // --- INACTIVITY NOTIFICATION FUNCTIONALLITY ---
 private const val CHANNEL_ID = "inactivity_channel"
 private const val NOTIFICATION_ID= 1
-private var alias = ""
 
 // --- NOTIFICATION CHANNEL ---
 fun createNotificationsChannel(context: Context){
@@ -684,12 +766,11 @@ fun sendInactivityNotification(context: Context){
     NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
 }
 
-fun getAlias(): String{
-    return alias
-}
+private var alias = ""
 fun setAlias(nAlias: String){
     alias = nAlias
 }
+
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
@@ -697,5 +778,6 @@ fun GreetingPreview() {
         //Login ( onLogin = {} )
         //Tasks( "Alejandro", "ale", onBack = {})
         //AddTaskDialog( onDismiss = {}, onConfirm = {}, "ale")
+        //PreferencesDialog("Rojo")
     }
 }
