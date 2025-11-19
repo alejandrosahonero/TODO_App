@@ -10,6 +10,7 @@ import android.hardware.SensorEventListener
 import android.os.Build
 import kotlinx.coroutines.delay
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -87,6 +88,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -381,7 +383,10 @@ fun Tasks(nombre: String, alias: String){
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        val shakeDetector = ShakeDetector { listaTareas.sortByDescending { it.priority } }
+        val shakeDetector = ShakeDetector {
+            listaTareas.sortByDescending { it.priority }
+            Toast.makeText(context, "¡Lista ordenada por prioridad!", Toast.LENGTH_LONG).apply { show() }
+        }
 
         // --- SENSOR LISTENER ---
         sensorManager.registerListener(
@@ -756,6 +761,14 @@ fun PreferencesDialog(selectedTheme: State<Boolean>, selectedColor: State<String
                         Text(taskColor)
                     }
                 }
+                Spacer(Modifier.height(20.dp))
+                // --- ADVICE ---
+                Text(
+                    text = "¡Recuerda que puedes ordenar la lista de tareas sacudiendo el dispositivo!",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontStyle = FontStyle.Italic,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
