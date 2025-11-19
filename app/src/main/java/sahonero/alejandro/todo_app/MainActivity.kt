@@ -3,6 +3,10 @@ package sahonero.alejandro.todo_app
 import android.content.pm.PackageManager
 import android.Manifest
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
 import android.os.Build
 import kotlinx.coroutines.delay
 import android.os.Bundle
@@ -64,10 +68,12 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -89,14 +95,13 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.getSystemService
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
 
@@ -255,23 +260,26 @@ fun Tasks(nombre: String, alias: String){
     // --- PREFERENCES ---
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var selectedColor = TodoPreferences.getColor(context).collectAsState(initial = "Default")
-    var selectedTheme = TodoPreferences.getTheme(context).collectAsState(initial = true)
+    val selectedColor = TodoPreferences.getColor(context).collectAsState(initial = "Default")
+    val selectedTheme = TodoPreferences.getTheme(context).collectAsState(initial = true)
     // --- TASKS ---
     var showAddTask by remember { mutableStateOf(false) }
-    val listaTareas = remember { mutableStateMapOf<String, Int>() }
-    val tareasCompletadas = remember { mutableStateListOf<String>() }
+    val listaTareas = remember { mutableStateListOf<Task>() }
     // --- SEARCH ---
     var searchQuery by remember { mutableStateOf("") }
-    val filteredTasks = if (searchQuery.isBlank()) {
-        listaTareas
-    } else {
-        listaTareas.filter { (tarea, _) ->
-            tarea.contains(searchQuery, ignoreCase = true)
+    val filteredTasks by remember(searchQuery) {
+        derivedStateOf {
+            if (searchQuery.isBlank()) {
+                listaTareas
+            } else {
+                listaTareas.filter { tarea ->
+                    tarea.description.contains(searchQuery, ignoreCase = true)
+                }
+            }
         }
     }
     // --- NOTIFICATIONS ---
-    var lastTaskTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    var lastTaskTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     // For API 33+
     val permissionLauncher = rememberLauncherForActivityResult( contract = ActivityResultContracts.RequestPermission() ){}
 
@@ -323,8 +331,15 @@ fun Tasks(nombre: String, alias: String){
             TaskList(
                 filteredTasks = filteredTasks,
                 listaTareas = listaTareas,
-                tareasCompletadas = tareasCompletadas,
-                selectedColor = selectedColor
+                selectedColor = selectedColor,
+                onCheckedChange = { tareaAEditar, nuevoEstado ->
+                    val index = listaTareas.indexOfFirst { it.id == tareaAEditar.id }
+                    if (index != -1)
+                        listaTareas[index] = listaTareas[index].copy(isCompleted = nuevoEstado)
+                },
+                onDeleteTask = { tareaABorrar ->
+                    listaTareas.remove(tareaABorrar)
+                }
             )
         }
     }
@@ -334,8 +349,13 @@ fun Tasks(nombre: String, alias: String){
             onDismiss = { showAddTask = false },
             onConfirm = { nuevaTarea, prioridad ->
                 if (nuevaTarea.isNotBlank()) {
-                    listaTareas[nuevaTarea] = prioridad
-                    lastTaskTime = System.currentTimeMillis()
+                    listaTareas.add(
+                        Task(
+                            description = nuevaTarea,
+                            priority = prioridad
+                        )
+                    )
+                    lastTaskTime = System.currentTimeMillis() //Reiniciamos el contador cada que creamos una tarea
                 }
                 showAddTask = false
             },
@@ -356,6 +376,22 @@ fun Tasks(nombre: String, alias: String){
         // Cancelar el anterior y empezar un nuevo job
         delay(3 * 60 * 1000L)
         sendInactivityNotification(context)
+    }
+    // --- SHAKE TO SORT ---
+    DisposableEffect(Unit) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val shakeDetector = ShakeDetector { listaTareas.sortByDescending { it.priority } }
+
+        // --- SENSOR LISTENER ---
+        sensorManager.registerListener(
+            shakeDetector,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_UI
+        )
+        onDispose {
+            sensorManager.unregisterListener(shakeDetector)
+        }
     }
 }
 
@@ -432,9 +468,9 @@ fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
     )
 }
 @Composable
-fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, Int>, tareasCompletadas: MutableList<String>, selectedColor: State<String>){
+fun TaskList(filteredTasks: List<Task>, listaTareas: MutableList<Task>, selectedColor: State<String>, onCheckedChange: (Task, Boolean) -> Unit, onDeleteTask: (Task) -> Unit){
     var showRemoveDialog by remember { mutableStateOf(false) }
-    var taskToDelete by remember { mutableStateOf("") }
+    var taskToDelete by remember { mutableStateOf<Task?>(null) }
 
     Box(
         Modifier.fillMaxSize(),
@@ -444,9 +480,9 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
         LazyColumn(
             Modifier.fillMaxSize()
         ) {
-            items(filteredTasks.toList()) { (tarea, prioridad) ->
+            items( items = filteredTasks, key = { it.id } ) { tarea ->
 
-                val isCompleted = tareasCompletadas.contains(tarea)
+                val isCompleted = tarea.isCompleted
 
                 Row(
                     modifier = Modifier
@@ -466,15 +502,15 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                     ) {
                         Checkbox(
                             checked = isCompleted,
-                            onCheckedChange = { nuevoValor ->
-                                if (nuevoValor) tareasCompletadas.add(tarea) else tareasCompletadas.remove(tarea)
+                            onCheckedChange = { isChecked ->
+                                onCheckedChange(tarea, isChecked)
                             }
                         )
                         Spacer(Modifier.width(4.dp))
                         // --- DESCRIPTION AND PRIORITY ---
                         Column {
                             Text(
-                                text = tarea,
+                                text = tarea.description,
                                 fontSize = 15.sp,
                                 color = when(selectedColor.value){
                                     "Rojo" -> Color.Red
@@ -486,13 +522,13 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
                                 textDecoration = if (isCompleted) TextDecoration.LineThrough else null
                             )
                             Text(
-                                text = when(prioridad){
+                                text = when(tarea.priority){
                                     1 -> "Baja"
                                     2 -> "Media"
                                     3 -> "Alta"
                                     else -> "Sin prioridad"
                                 },
-                                color = when(prioridad){
+                                color = when(tarea.priority){
                                     1 -> Color.Green
                                     2 -> Color.Yellow
                                     3 -> Color.Red
@@ -530,12 +566,12 @@ fun TaskList( filteredTasks: Map<String, Int>, listaTareas: MutableMap<String, I
             )
         }
     }
-    if(showRemoveDialog){
+    if(showRemoveDialog && taskToDelete != null){
         RemoveTaskDialog(
             onConfirm = {
-                listaTareas.remove(taskToDelete)
-                tareasCompletadas.remove(taskToDelete)
+                onDeleteTask(taskToDelete!!)
                 showRemoveDialog = false
+                taskToDelete = null
             },
             onDismiss = { showRemoveDialog = false }
         )
