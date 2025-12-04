@@ -103,6 +103,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
@@ -264,20 +265,38 @@ fun Tasks(nombre: String, alias: String){
     val scope = rememberCoroutineScope()
     val selectedColor = TodoPreferences.getColor(context).collectAsState(initial = "Default")
     val selectedTheme = TodoPreferences.getTheme(context).collectAsState(initial = true)
+    // --- DATABASE ---
+    val db = Room.databaseBuilder(
+        context,
+        AppDatabase::class.java, "todoapp-database"
+    ).build()
+    val taskDao = db.taskDao()
     // --- TASKS ---
     var showAddTask by remember { mutableStateOf(false) }
-    val listaTareas = remember { mutableStateListOf<Task>() }
+    val listaTareasState = taskDao.getTasks().collectAsState(initial = emptyList())
+    val listaTareas by listaTareasState
     // --- SEARCH ---
+    var sortByPriority by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    val filteredTasks by remember(searchQuery) {
+    val filteredTasks by remember(searchQuery, listaTareasState.value, sortByPriority) {
         derivedStateOf {
-            if (searchQuery.isBlank()) {
-                listaTareas
+            // Obtenemos el Flow
+            val currentList = listaTareas
+
+            // Filtramos por búsqueda
+            val searchResult = if (searchQuery.isBlank()) {
+                currentList
             } else {
-                listaTareas.filter { tarea ->
-                    tarea.description.contains(searchQuery, ignoreCase = true)
+                currentList.filter {
+                    it.description.contains(searchQuery, ignoreCase = true)
                 }
             }
+
+            // Luego ordenamos si hay un shake
+            if(sortByPriority)
+                searchResult.sortedByDescending { it.priority }
+            else
+                searchResult
         }
     }
     // --- NOTIFICATIONS ---
@@ -335,12 +354,15 @@ fun Tasks(nombre: String, alias: String){
                 listaTareas = listaTareas,
                 selectedColor = selectedColor,
                 onCheckedChange = { tareaAEditar, nuevoEstado ->
-                    val index = listaTareas.indexOfFirst { it.id == tareaAEditar.id }
-                    if (index != -1)
-                        listaTareas[index] = listaTareas[index].copy(isCompleted = nuevoEstado)
+                    scope.launch {
+                        taskDao.updateTask(tareaAEditar.copy(isCompleted = nuevoEstado))
+                    }
                 },
                 onDeleteTask = { tareaABorrar ->
-                    listaTareas.remove(tareaABorrar)
+                    // Borramos la tarea directamente de la BD
+                    scope.launch {
+                        taskDao.deleteTask(tareaABorrar)
+                    }
                 }
             )
         }
@@ -351,13 +373,17 @@ fun Tasks(nombre: String, alias: String){
             onDismiss = { showAddTask = false },
             onConfirm = { nuevaTarea, prioridad ->
                 if (nuevaTarea.isNotBlank()) {
-                    listaTareas.add(
-                        Task(
-                            description = nuevaTarea,
-                            priority = prioridad
+                    // Insertamos una nueva tarea directamente a la BD
+                    scope.launch {
+                        taskDao.insertTask(
+                            Task(
+                                description = nuevaTarea,
+                                priority = prioridad
+                            )
                         )
-                    )
-                    lastTaskTime = System.currentTimeMillis() //Reiniciamos el contador cada que creamos una tarea
+                    }
+                    // Reiniciamos el contador cada que creamos una tarea
+                    lastTaskTime = System.currentTimeMillis()
                 }
                 showAddTask = false
             },
@@ -384,7 +410,8 @@ fun Tasks(nombre: String, alias: String){
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         val shakeDetector = ShakeDetector {
-            listaTareas.sortByDescending { it.priority }
+            // Alternamos el orden
+            sortByPriority = !sortByPriority
             Toast.makeText(context, "¡Lista ordenada por prioridad!", Toast.LENGTH_LONG).apply { show() }
         }
 
@@ -473,7 +500,7 @@ fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
     )
 }
 @Composable
-fun TaskList(filteredTasks: List<Task>, listaTareas: MutableList<Task>, selectedColor: State<String>, onCheckedChange: (Task, Boolean) -> Unit, onDeleteTask: (Task) -> Unit){
+fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: State<String>, onCheckedChange: (Task, Boolean) -> Unit, onDeleteTask: (Task) -> Unit){
     var showRemoveDialog by remember { mutableStateOf(false) }
     var taskToDelete by remember { mutableStateOf<Task?>(null) }
 
