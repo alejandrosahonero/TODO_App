@@ -2,6 +2,7 @@ package sahonero.alejandro.todo_app
 
 import android.content.pm.PackageManager
 import android.Manifest
+import android.app.DatePickerDialog
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
@@ -10,6 +11,7 @@ import android.hardware.SensorEventListener
 import android.os.Build
 import kotlinx.coroutines.delay
 import android.os.Bundle
+import android.widget.DatePicker
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,6 +41,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
@@ -66,6 +69,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -107,6 +111,7 @@ import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
+import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -609,12 +614,16 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
         )
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias: String){
+    // --- TASK ADDING ---
     var nuevaTarea by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableIntStateOf(0) }
-
+    // --- FOCUS ON TASK DESCRIPTION ---
     val focusRequester = remember { FocusRequester() }
+    // --- DATE PICKER ---
+    val datePickerState = rememberDatePickerState()
 
     Dialog( onDismissRequest = onDismiss ) {
         Surface(
@@ -694,6 +703,9 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias
                         Text("Baja", modifier = Modifier.clickable{ selectedPriority = 1})
                     }
                 }
+                Spacer(Modifier.height(20.dp))
+                // --- DATE PICKER ---
+                DatePickerModal()
             }
         }
     }
@@ -704,6 +716,44 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerModal() {
+    val context = LocalContext.current
+    // Estado para guardar la fecha
+    var fechaSeleccionada by remember { mutableStateOf("") }
+    // Inicializamos el calendario con la fecha de hoy
+    val calendario = Calendar.getInstance()
+    val anio = calendario.get(Calendar.YEAR)
+    val mes = calendario.get(Calendar.MONTH)
+    val dia = calendario.get(Calendar.DAY_OF_MONTH)
+
+    // Configuración del diálogo
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
+            val fechaFormateada = String.format("%02d/%02d/%d", dayOfMonth, month + 1, year)
+            fechaSeleccionada = fechaFormateada
+        },
+        anio, mes, dia
+    )
+
+    OutlinedTextField(
+        value = fechaSeleccionada,
+        onValueChange = {},
+        label = { Text("¿Para cuando?") },
+        placeholder = { Text("DD/MM/AAAA") },
+        readOnly = true,
+        trailingIcon = {
+            IconButton( onClick = { datePickerDialog.show() }) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = "Seleccionar fecha"
+                )
+            }
+        }
+    )
+}
 @Composable
 fun RemoveTaskDialog(onConfirm: () -> Unit, onDismiss: () -> Unit){
     AlertDialog(
@@ -847,6 +897,7 @@ fun setAlias(nAlias: String){
     alias = nAlias
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
