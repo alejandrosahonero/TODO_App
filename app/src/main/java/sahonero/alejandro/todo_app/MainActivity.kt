@@ -111,6 +111,7 @@ import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
+import java.time.LocalDate
 import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
@@ -376,14 +377,15 @@ fun Tasks(nombre: String, alias: String){
     if(showAddTask){
         AddTaskDialog(
             onDismiss = { showAddTask = false },
-            onConfirm = { nuevaTarea, prioridad ->
+            onConfirm = { nuevaTarea, prioridad, fechaSeleccionada ->
                 if (nuevaTarea.isNotBlank()) {
                     // Insertamos una nueva tarea directamente a la BD
                     scope.launch {
                         taskDao.insertTask(
                             Task(
                                 description = nuevaTarea,
-                                priority = prioridad
+                                priority = prioridad,
+                                expirationDate = fechaSeleccionada
                             )
                         )
                     }
@@ -547,6 +549,19 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                         // --- DESCRIPTION AND PRIORITY ---
                         Column {
                             Text(
+                                text = when(tarea.expirationDate){
+                                    "Never" -> "Sin expiración"
+                                    else -> tarea.expirationDate
+                                },
+                                color = when(tarea.expirationDate){
+                                    "Never" -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                fontSize = 12.sp
+                            )
+                            Text(
                                 text = tarea.description,
                                 fontSize = 15.sp,
                                 color = when(selectedColor.value){
@@ -616,7 +631,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias: String){
+fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Unit, alias: String){
     // --- TASK ADDING ---
     var nuevaTarea by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableIntStateOf(0) }
@@ -624,6 +639,7 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias
     val focusRequester = remember { FocusRequester() }
     // --- DATE PICKER ---
     val datePickerState = rememberDatePickerState()
+    var fechaSeleccionada by remember { mutableStateOf("Never") }
 
     Dialog( onDismissRequest = onDismiss ) {
         Surface(
@@ -644,7 +660,7 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias
                         )
                     }
                     TextButton(
-                        onClick = { if (nuevaTarea.isNotBlank()) onConfirm(nuevaTarea, selectedPriority) },
+                        onClick = { if (nuevaTarea.isNotBlank()) onConfirm(nuevaTarea, selectedPriority, fechaSeleccionada) },
                         enabled = nuevaTarea.isNotBlank()
                     ) {
                         Text("Listo")
@@ -705,7 +721,13 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias
                 }
                 Spacer(Modifier.height(20.dp))
                 // --- DATE PICKER ---
-                DatePickerModal()
+                DatePickerModal(
+                    currentDate = fechaSeleccionada,
+                    onDateSelected = { newDate ->
+                        fechaSeleccionada = newDate
+                    }
+                )
+
             }
         }
     }
@@ -718,7 +740,7 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int) -> Unit, alias
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DatePickerModal() {
+fun DatePickerModal(currentDate: String, onDateSelected: (String) -> Unit) {
     val context = LocalContext.current
     // Estado para guardar la fecha
     var fechaSeleccionada by remember { mutableStateOf("") }
@@ -733,13 +755,13 @@ fun DatePickerModal() {
         context,
         { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
             val fechaFormateada = String.format("%02d/%02d/%d", dayOfMonth, month + 1, year)
-            fechaSeleccionada = fechaFormateada
+            onDateSelected(fechaFormateada)
         },
         anio, mes, dia
     )
 
     OutlinedTextField(
-        value = fechaSeleccionada,
+        value = if(currentDate == "Never") "" else currentDate,
         onValueChange = {},
         label = { Text("¿Para cuando?") },
         placeholder = { Text("DD/MM/AAAA") },
