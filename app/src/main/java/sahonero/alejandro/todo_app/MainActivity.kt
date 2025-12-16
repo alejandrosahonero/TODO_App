@@ -3,14 +3,15 @@ package sahonero.alejandro.todo_app
 import android.content.pm.PackageManager
 import android.Manifest
 import android.app.DatePickerDialog
+import android.content.ContentValues
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
 import android.os.Build
 import kotlinx.coroutines.delay
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.widget.DatePicker
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nightlight
@@ -78,7 +80,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -101,7 +102,6 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.getSystemService
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -111,7 +111,8 @@ import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
-import java.time.LocalDate
+import java.io.File
+import java.io.FileOutputStream
 import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
@@ -344,7 +345,8 @@ fun Tasks(nombre: String, alias: String){
                     selectedTheme = selectedTheme,
                     selectedColor = selectedColor,
                     context = context,
-                    scope = scope
+                    scope = scope,
+                    listaTareas = listaTareas
                 )
             }
             Spacer(Modifier.height(10.dp))
@@ -435,7 +437,7 @@ fun Tasks(nombre: String, alias: String){
 }
 
 @Composable
-fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, context: Context, scope: CoroutineScope){
+fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, context: Context, scope: CoroutineScope, listaTareas: List<Task>){
     var expanded by remember { mutableStateOf(false) }
     var showPreferencesDialog by remember { mutableStateOf(false) }
     // --- MENU ---
@@ -470,6 +472,25 @@ fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, co
                     expanded = false
                 }
             )
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Download,
+                            contentDescription = "Exportar tareas"
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Exportar tareas")
+                    }
+                },
+                onClick = {
+                    exportarTareas(context, listaTareas)
+                    expanded = false
+                }
+            )
         }
     }
     if (showPreferencesDialog){
@@ -480,6 +501,47 @@ fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, co
             scope = scope,
             onDismiss = { showPreferencesDialog = false }
         )
+    }
+}
+
+fun exportarTareas(context: Context, listaTareas: List<Task>){
+    val nombreArchivo = "tareas.txt"
+    var texto = ""
+    listaTareas.forEach {
+        texto += "Tarea: ${it.description}\n" +
+                "Prioridad: ${when(it.priority){ 1 -> "Baja" 2 -> "Media" 3 -> "Alta" else -> "Ninguna" } }\n" +
+                "Fecha de expiración: ${it.expirationDate}\n" +
+                "------------\n"
+    }
+
+    // Comprobamos la version de Android
+    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, nombreArchivo)
+            put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+
+        uri?.let {
+            resolver.openOutputStream(it)?.use { output ->
+                output.write(texto.toByteArray())
+            }
+            Toast.makeText(context, "¡Tareas guardadas en Descargas!", Toast.LENGTH_LONG).show()
+        } ?: run {
+            Toast.makeText(context, "No se han podido guardar las tareas", Toast.LENGTH_LONG).show()
+        }
+    }else {
+        val directorio = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        // Inicializamos el archivo
+        val archivo = File(directorio, nombreArchivo)
+
+        // Creamos el archivo
+        FileOutputStream(archivo).use { it.write(texto.toByteArray()) }
+
+        Toast.makeText(context, "¡Tareas guardadas en Descargas!", Toast.LENGTH_LONG).show()
     }
 }
 
