@@ -19,6 +19,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -50,7 +51,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -60,6 +60,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,7 +72,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -93,6 +93,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -102,12 +103,18 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.navigation.NavType
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import androidx.room.Room
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
@@ -138,37 +145,32 @@ fun AppNavigation() {
     ){
         composable ("login"){
             Login(
-                onLogin = { nombre, alias ->
-                    navController.navigate("tasks/$nombre/$alias") }
+                onLogin = {
+                    navController.navigate("tasks") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
             )
         }
-        composable(
-            route = "tasks/{nombre}/{alias}",
-            arguments = listOf(
-                navArgument("nombre") { type = NavType.StringType },
-                navArgument("alias") { type = NavType.StringType }
-            )
-        ){ backStackEntry ->
-            val nombre = backStackEntry.arguments?.getString("nombre")!!
-            val alias = backStackEntry.arguments?.getString("alias")!!
-
-            setAlias(alias)
-
-            Tasks(
-                nombre = nombre,
-                alias = alias
-            )
+        composable("tasks") {
+            Tasks()
         }
     }
 }
 
 @Composable
-fun Login(onLogin: (String, String) -> Unit){
-    var nombre by remember { mutableStateOf("") }
-    var alias by remember { mutableStateOf("") }
+fun Login(onLogin: () -> Unit){
+    // Firebase variables
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val scope = rememberCoroutineScope()
 
-    var showErrorNombre by remember { mutableStateOf(false) }
-    var showErrorAlias by remember { mutableStateOf(false) }
+    // Form states
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var nameInput by remember { mutableStateOf("") }
+    var isRegistering by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Surface( Modifier.fillMaxSize() ) {
         Box(
@@ -201,62 +203,144 @@ fun Login(onLogin: (String, String) -> Unit){
                     Spacer(Modifier.height(20.dp))
                     // --- FIELDS ---
                     OutlinedTextField(
-                        value = nombre,
-                        onValueChange = { nombre = it; showErrorNombre = false },
-                        label = { Text("Nombre") },
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        isError = showErrorNombre
                     )
                     Spacer(Modifier.height(20.dp))
                     OutlinedTextField(
-                        value = alias,
-                        onValueChange = { alias = it; showErrorAlias = false },
-                        label = { Text("Alias") },
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Contraseña") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        isError = showErrorAlias
+                        visualTransformation = PasswordVisualTransformation(),
                     )
-                    if(showErrorNombre || showErrorAlias){
-                        Spacer(Modifier.height(10.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Outlined.Info,
-                                contentDescription = "Error",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Debe completar ambos campos",
-                                color = MaterialTheme.colorScheme.error,
-                                fontSize = 15.sp
-                            )
-                        }
-                    }
                     Spacer(Modifier.height(10.dp))
-                    // --- LOGIN BUTTON ---
+                    if(isRegistering){
+                        OutlinedTextField(
+                            value = nameInput,
+                            onValueChange = { nameInput = it },
+                            label = { Text("Nombre") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(20.dp))
+                    }
+                    if(errorMessage != null) {
+                        Text(
+                            text = errorMessage!!,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    // --- LOGIN / REGISTER BUTTON ---
+                    Spacer(Modifier.height(20.dp))
                     Button(
                         onClick = {
-                            if (nombre.isBlank() && alias.isBlank()) {
-                                showErrorNombre = true
-                                showErrorAlias = true
-                            } else if (nombre.isBlank()) {
-                                showErrorNombre = true
-                            } else if (alias.isBlank()) {
-                                showErrorAlias = true
-                            } else {
-                                showErrorNombre = false
-                                showErrorAlias = false
-                                onLogin(nombre.trim(), alias.trim())
+                            if(email.isNotEmpty() && password.isNotEmpty()){
+                                if(isRegistering){
+                                    if(nameInput.isBlank()){
+                                        errorMessage = "Escribe tu nombre para registrarte"
+                                        return@Button
+                                    }
+                                    auth.createUserWithEmailAndPassword(email, password)
+                                        .addOnCompleteListener { task ->
+                                            if(task.isSuccessful){
+                                                val user = auth.currentUser
+                                                val profileUpdates = UserProfileChangeRequest.Builder()
+                                                    .setDisplayName(nameInput)
+                                                    .build()
+
+                                                user?.updateProfile(profileUpdates)
+                                                    ?.addOnCompleteListener {
+                                                        onLogin()
+                                                    }
+                                            } else errorMessage = task.exception?.message
+                                        }
+                                } else {
+                                    auth.signInWithEmailAndPassword(email, password)
+                                        .addOnCompleteListener { task ->
+                                            if(task.isSuccessful) onLogin()
+                                            else errorMessage = task.exception?.message
+                                        }
+                                }
                             }
                         }
                     ) {
-                        Text("Continuar")
+                        Text(if(isRegistering) "Registrarse" else "Iniciar Sesion")
+                    }
+                    // --- OTHER OPTIONS TO LOGIN ---
+                    Spacer(Modifier.height(20.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ){
+                        Spacer(Modifier.width(8.dp))
+                        HorizontalDivider(Modifier.weight(1f))
+                        Spacer(Modifier.width(12.dp))
+                        Text(text = "o", textAlign = TextAlign.Center)
+                        Spacer(Modifier.width(12.dp))
+                        HorizontalDivider(Modifier.weight(1f))
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    // --- GOOGLE BUTTON ---
+                    Spacer(Modifier.height(20.dp))
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val credentialManager = CredentialManager.create(context)
+                                val googleIdOption = GetGoogleIdOption.Builder()
+                                    .setFilterByAuthorizedAccounts(false)
+                                    .setServerClientId("483788113168-4gh0mv1tq39v1js0bldr6vvbnlafvf6c.apps.googleusercontent.com")
+                                    .setAutoSelectEnabled(false)
+                                    .build()
+
+                                val request = GetCredentialRequest.Builder()
+                                    .addCredentialOption(googleIdOption)
+                                    .build()
+
+                                try{
+                                    val result = credentialManager.getCredential(context, request)
+                                    val credential = result.credential
+
+                                    if(credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL){
+                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                        val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+
+                                        auth.signInWithCredential(firebaseCredential)
+                                            .addOnSuccessListener { onLogin() }
+                                            .addOnFailureListener { e -> errorMessage = e.message }
+                                    }
+                                } catch (e: Exception){
+                                    errorMessage = "Error Google: ${e.message}"
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.google_logo),
+                                contentDescription = "Google logo",
+                                modifier = Modifier.size(25.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Google")
+                        }
+                    }
+
+                    TextButton(onClick = { isRegistering = !isRegistering }) {
+                        Text(
+                            text = if(isRegistering) "¿Ya tienes cuenta? Entra aquí" else "¿No tienes cuenta? Registrate aquí",
+                            textAlign = TextAlign.Center,
+                            fontStyle = FontStyle.Italic
+                        )
                     }
                 }
             }
@@ -266,35 +350,53 @@ fun Login(onLogin: (String, String) -> Unit){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Tasks(nombre: String, alias: String){
+fun Tasks(){
     // --- PREFERENCES ---
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val selectedColor = TodoPreferences.getColor(context).collectAsState(initial = "Default")
     val selectedTheme = TodoPreferences.getTheme(context).collectAsState(initial = true)
-    // --- DATABASE ---
-    val db = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java, "todoapp-database"
-    ).build()
-    val taskDao = db.taskDao()
+    // --- FIREBASE ---
+    val auth = FirebaseAuth.getInstance()
+    val user = auth.currentUser
+    val userName = user?.displayName ?: user?.email?.substringBefore("@") ?: "Usuario"
+    setAlias(userName)
+    val db = FirebaseFirestore.getInstance()
+
+    if(user == null) return
+
+    val taskList = remember { mutableStateOf<List<Task>>(emptyList()) }
+
+    DisposableEffect(Unit) {
+        val listener = db.collection("tasks")
+            .whereEqualTo("userId", user.uid)
+            .addSnapshotListener { snapshots, e ->
+                if(e != null){
+                    Toast.makeText(context, "Error al cargar: ${e.message}", Toast.LENGTH_LONG).show()
+                    return@addSnapshotListener
+                }
+                if(snapshots != null){
+                    val tasks = snapshots.documents.map { doc ->
+                        doc.toObject(Task::class.java)!!.copy(id = doc.id)
+                    }
+                    taskList.value = tasks
+                }
+            }
+        onDispose { listener.remove() }
+    }
     // --- TASKS ---
     var showAddTask by remember { mutableStateOf(false) }
-    val listaTareasState = taskDao.getTasks().collectAsState(initial = emptyList())
-    val listaTareas by listaTareasState
+
     // --- SEARCH ---
     var sortByPriority by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    val filteredTasks by remember(searchQuery, listaTareasState.value, sortByPriority) {
+    val filteredTasks by remember(searchQuery, taskList, sortByPriority) {
         derivedStateOf {
-            // Obtenemos el Flow
-            val currentList = listaTareas
-
             // Filtramos por búsqueda
             val searchResult = if (searchQuery.isBlank()) {
-                currentList
+                taskList.value
             } else {
-                currentList.filter {
+                taskList.value.filter {
                     it.description.contains(searchQuery, ignoreCase = true)
                 }
             }
@@ -331,10 +433,10 @@ fun Tasks(nombre: String, alias: String){
                 // --- WELCOME ---
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = "¡Qué tal $nombre!",
+                        text = "¡Qué tal $userName!",
                     )
                     Text(
-                        text = if (listaTareas.isEmpty()) "¿NO HAY NADA QUE HACER?" else if (listaTareas.size < 4) "¡TE QUEDA POCO!" else "¡HAY MUCHO POR HACER!",
+                        text = if (taskList.value.isEmpty()) "¿NO HAY NADA QUE HACER?" else if (taskList.value.size < 4) "¡TE QUEDA POCO!" else "¡HAY MUCHO POR HACER!",
                         fontSize = 40.sp,
                         fontWeight = FontWeight.ExtraBold,
                         lineHeight = 40.sp
@@ -346,7 +448,7 @@ fun Tasks(nombre: String, alias: String){
                     selectedColor = selectedColor,
                     context = context,
                     scope = scope,
-                    listaTareas = listaTareas
+                    listaTareas = taskList.value
                 )
             }
             Spacer(Modifier.height(10.dp))
@@ -359,18 +461,14 @@ fun Tasks(nombre: String, alias: String){
             // --- TASKS LIST ---
             TaskList(
                 filteredTasks = filteredTasks,
-                listaTareas = listaTareas,
+                listaTareas = taskList.value,
                 selectedColor = selectedColor,
                 onCheckedChange = { tareaAEditar, nuevoEstado ->
-                    scope.launch {
-                        taskDao.updateTask(tareaAEditar.copy(isCompleted = nuevoEstado))
-                    }
+                    db.collection("tasks").document(tareaAEditar.id).update("completed", nuevoEstado)
                 },
                 onDeleteTask = { tareaABorrar ->
                     // Borramos la tarea directamente de la BD
-                    scope.launch {
-                        taskDao.deleteTask(tareaABorrar)
-                    }
+                    db.collection("tasks").document(tareaABorrar.id).delete()
                 }
             )
         }
@@ -382,19 +480,17 @@ fun Tasks(nombre: String, alias: String){
             onConfirm = { nuevaTarea, prioridad, fechaSeleccionada ->
                 if (nuevaTarea.isNotBlank()) {
                     // Insertamos una nueva tarea directamente a la BD
-                    scope.launch {
-                        taskDao.insertTask(
-                            Task(
-                                description = nuevaTarea,
-                                priority = prioridad,
-                                expirationDate = fechaSeleccionada
-                            )
-                        )
-                    }
+                    val nuevaTarea = Task(
+                        description = nuevaTarea,
+                        priority = prioridad,
+                        expirationDate = fechaSeleccionada,
+                        userId = user.uid
+                    )
+                    db.collection("tasks").add(nuevaTarea)
+                    showAddTask = false
                     // Reiniciamos el contador cada que creamos una tarea
                     lastTaskTime = System.currentTimeMillis()
                 }
-                showAddTask = false
             },
             alias = alias
         )
@@ -583,7 +679,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
         ) {
             items( items = filteredTasks, key = { it.id } ) { tarea ->
 
-                val isCompleted = tarea.isCompleted
+                val isCompleted = tarea.completed
 
                 Row(
                     modifier = Modifier
@@ -700,7 +796,6 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Uni
     // --- FOCUS ON TASK DESCRIPTION ---
     val focusRequester = remember { FocusRequester() }
     // --- DATE PICKER ---
-    val datePickerState = rememberDatePickerState()
     var fechaSeleccionada by remember { mutableStateOf("Never") }
 
     Dialog( onDismissRequest = onDismiss ) {
@@ -804,8 +899,6 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Uni
 @Composable
 fun DatePickerModal(currentDate: String, onDateSelected: (String) -> Unit) {
     val context = LocalContext.current
-    // Estado para guardar la fecha
-    var fechaSeleccionada by remember { mutableStateOf("") }
     // Inicializamos el calendario con la fecha de hoy
     val calendario = Calendar.getInstance()
     val anio = calendario.get(Calendar.YEAR)
