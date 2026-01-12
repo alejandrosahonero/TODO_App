@@ -42,11 +42,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Search
@@ -153,7 +155,13 @@ fun AppNavigation() {
             )
         }
         composable("tasks") {
-            Tasks()
+            Tasks(
+                logout = {
+                    navController.navigate("login") {
+                        popUpTo("tasks") { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
@@ -350,7 +358,7 @@ fun Login(onLogin: () -> Unit){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Tasks(){
+fun Tasks(logout: () -> Unit){
     // --- PREFERENCES ---
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -448,7 +456,11 @@ fun Tasks(){
                     selectedColor = selectedColor,
                     context = context,
                     scope = scope,
-                    listaTareas = taskList.value
+                    listaTareas = taskList.value,
+                    cerrarSesion = {
+                        auth.signOut()
+                        logout()
+                    }
                 )
             }
             Spacer(Modifier.height(10.dp))
@@ -533,7 +545,7 @@ fun Tasks(){
 }
 
 @Composable
-fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, context: Context, scope: CoroutineScope, listaTareas: List<Task>){
+fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, context: Context, scope: CoroutineScope, listaTareas: List<Task>, cerrarSesion: () -> Unit){
     var expanded by remember { mutableStateOf(false) }
     var showPreferencesDialog by remember { mutableStateOf(false) }
     // --- MENU ---
@@ -584,6 +596,25 @@ fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, co
                 },
                 onClick = {
                     exportarTareas(context, listaTareas)
+                    expanded = false
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Cerrar sesión"
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Cerrar sesión")
+                    }
+                },
+                onClick = {
+                    cerrarSesion()
                     expanded = false
                 }
             )
