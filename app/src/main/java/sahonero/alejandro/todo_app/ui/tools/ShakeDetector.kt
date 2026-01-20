@@ -1,4 +1,4 @@
-package sahonero.alejandro.todo_app
+package sahonero.alejandro.todo_app.ui.tools
 
 import android.hardware.Sensor
 import android.hardware.SensorEvent
