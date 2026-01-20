@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import sahonero.alejandro.todo_app.data.model.PokemonDetailResponse
 import sahonero.alejandro.todo_app.data.model.PokemonItem
 import sahonero.alejandro.todo_app.data.network.PokemonApi
 import sahonero.alejandro.todo_app.data.repository.PokemonRepository
@@ -22,17 +23,12 @@ class PokemonViewModel: ViewModel() {
 
     private val repo = PokemonRepository(api)
 
-    // --- PAGINACION MANUAL ---
-    companion object{
-        private const val PAGE_SIZE = 20
-    }
-    private var currentOffset = 0
-    private var isLoading = false
-    private var canLoadMore = true
-
-    // --- ONE POKEMON ---
+    // --- DETALLES DE UN POKEMON (ID) ---
     private val _selectedPokemon = MutableStateFlow<PokemonItem?>(null)
     val selectedPokemon: StateFlow<PokemonItem?> = _selectedPokemon.asStateFlow()
+    // --- DETALLES DE UN POKEMON (NAME) ---
+    private val _pokemonDetail = MutableStateFlow<PokemonDetailResponse?>(null)
+    val pokemonDetail: StateFlow<PokemonDetailResponse?> = _pokemonDetail.asStateFlow()
 
     // --- POKEMON NAMES ---
     private val _pokemonNames = MutableStateFlow<List<String>>(emptyList())
@@ -52,30 +48,6 @@ class PokemonViewModel: ViewModel() {
         }
     }
 
-    private fun loadMorePokemons() {
-        if(isLoading || !canLoadMore) return
-
-        viewModelScope.launch {
-            isLoading = true
-            try {
-                val response = repo.getPokemons(offset = currentOffset, limit = PAGE_SIZE)
-                val newNames = response.results.map { it.name }
-
-                if(newNames.isNotEmpty()){
-                    _pokemonNames.update { currentList -> currentList + newNames }
-                    currentOffset += PAGE_SIZE
-                }else{
-                    canLoadMore = false
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _pokemonNames.value = emptyList()
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
     fun loadPokemon(id: String){
         viewModelScope.launch {
             try {
@@ -83,6 +55,17 @@ class PokemonViewModel: ViewModel() {
             }catch (e: Exception){
                 _selectedPokemon.value = null
             }
+        }
+    }
+
+    suspend fun getPokemonDetails(name: String): PokemonDetailResponse? {
+        return try {
+            val detail = repo.getPokemonByName(name.lowercase())
+            _pokemonDetail.value = detail
+            detail
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 

@@ -499,20 +499,17 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
     if(showAddTask){
         AddTaskDialog(
             onDismiss = { showAddTask = false },
-            onConfirm = { nuevaTarea, prioridad, fechaSeleccionada ->
-                if (nuevaTarea.isNotBlank()) {
-                    // Insertamos una nueva tarea directamente a la BD
-                    val nuevaTarea = Task(
-                        description = nuevaTarea,
-                        priority = prioridad,
-                        expirationDate = fechaSeleccionada,
-                        userId = user.uid
-                    )
-                    db.collection("tasks").add(nuevaTarea)
-                    showAddTask = false
-                    // Reiniciamos el contador cada que creamos una tarea
-                    lastTaskTime = System.currentTimeMillis()
-                }
+            onConfirm = { nuevaTarea ->
+                val tareaConUserId = nuevaTarea.copy(userId = user.uid)
+                db.collection("tasks").add(tareaConUserId)
+                    .addOnSuccessListener {
+                        showAddTask = false
+                        lastTaskTime = System.currentTimeMillis()
+                        Toast.makeText(context, "¡Tarea guardada!", Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
             },
             alias = alias,
             pokemonViewModel = pokemonViewModel
@@ -831,7 +828,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Unit, alias: String, pokemonViewModel: PokemonViewModel){
+fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (Task) -> Unit, alias: String, pokemonViewModel: PokemonViewModel){
     // --- TASK ADDING ---
     var nuevaTarea by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableIntStateOf(0) }
@@ -867,13 +864,43 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Uni
                         onClick = {
                             scope.launch {
                                 isLoading = true
+                                isError = false
+
                                 val ultimaPalabra = nuevaTarea.trim().split(" ").lastOrNull() ?: ""
 
-                                val esValido = pokemonViewModel.isValidPokemonName(ultimaPalabra)
+                                // Obtenemos los detalles del Pokémon
+                                val pokemonDetails = pokemonViewModel.getPokemonDetails(ultimaPalabra)
 
-                                if(esValido)
-                                    onConfirm(nuevaTarea, selectedPriority, fechaSeleccionada)
-                                else
+                                if(pokemonDetails != null) {
+                                    // Extraemos los stats (PokeAPI devuelve en orden específico)
+                                    val hp = pokemonDetails.stats.find { it.stat.name == "hp" }?.base_stat?.toString() ?: "0"
+                                    val ataque = pokemonDetails.stats.find { it.stat.name == "attack" }?.base_stat?.toString() ?: "0"
+                                    val defensa = pokemonDetails.stats.find { it.stat.name == "defense" }?.base_stat?.toString() ?: "0"
+                                    val velocidad = pokemonDetails.stats.find { it.stat.name == "speed" }?.base_stat?.toString() ?: "0"
+
+                                    // Extraemos tipos (traducidos al español)
+                                    val tipos = pokemonDetails.types.map { it.type.name }
+
+                                    // Imagen de mejor calidad (official artwork)
+                                    val imagen = pokemonDetails.sprites.front_default ?: ""
+
+                                    // Creamos la tarea completa con toda la info del Pokémon
+                                    val nuevaTareaCompleta = Task(
+                                        description = nuevaTarea,
+                                        priority = selectedPriority,
+                                        expirationDate = fechaSeleccionada,
+                                        pokemon = pokemonDetails.name,
+                                        tipos = tipos,
+                                        hp = hp,
+                                        ataque = ataque,
+                                        defensa = defensa,
+                                        velocidad = velocidad,
+                                        imagen = imagen,
+                                        userId = "" // Se asignará en Tasks()
+                                    )
+
+                                    onConfirm(nuevaTareaCompleta)
+                                } else
                                     isError = true
 
                                 isLoading = false
