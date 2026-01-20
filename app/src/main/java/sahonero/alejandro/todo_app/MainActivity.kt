@@ -48,7 +48,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Search
@@ -74,6 +73,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -108,6 +109,7 @@ import androidx.core.content.ContextCompat
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -119,6 +121,10 @@ import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import sahonero.alejandro.todo_app.data.model.Task
+import sahonero.alejandro.todo_app.ui.PokemonViewModel
+import sahonero.alejandro.todo_app.ui.tools.ShakeDetector
+import sahonero.alejandro.todo_app.ui.tools.TodoPreferences
 import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
 import java.io.File
 import java.io.FileOutputStream
@@ -141,6 +147,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+
+    val pokemonViewModel: PokemonViewModel = viewModel()
+
     NavHost(
         navController = navController,
         startDestination = "login"
@@ -160,7 +169,8 @@ fun AppNavigation() {
                     navController.navigate("login") {
                         popUpTo("tasks") { inclusive = true }
                     }
-                }
+                },
+                pokemonViewModel = pokemonViewModel
             )
         }
     }
@@ -358,7 +368,7 @@ fun Login(onLogin: () -> Unit){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Tasks(logout: () -> Unit){
+fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
     // --- PREFERENCES ---
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -504,7 +514,8 @@ fun Tasks(logout: () -> Unit){
                     lastTaskTime = System.currentTimeMillis()
                 }
             },
-            alias = alias
+            alias = alias,
+            pokemonViewModel = pokemonViewModel
         )
     }
     // --- PERMISSION CHECK ---
@@ -820,7 +831,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Unit, alias: String){
+fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Unit, alias: String, pokemonViewModel: PokemonViewModel){
     // --- TASK ADDING ---
     var nuevaTarea by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableIntStateOf(0) }
@@ -828,6 +839,11 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Uni
     val focusRequester = remember { FocusRequester() }
     // --- DATE PICKER ---
     var fechaSeleccionada by remember { mutableStateOf("Never") }
+    // --- API ---
+    var isError by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
 
     Dialog( onDismissRequest = onDismiss ) {
         Surface(
@@ -848,10 +864,27 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Uni
                         )
                     }
                     TextButton(
-                        onClick = { if (nuevaTarea.isNotBlank()) onConfirm(nuevaTarea, selectedPriority, fechaSeleccionada) },
+                        onClick = {
+                            scope.launch {
+                                isLoading = true
+                                val ultimaPalabra = nuevaTarea.trim().split(" ").lastOrNull() ?: ""
+
+                                val esValido = pokemonViewModel.isValidPokemonName(ultimaPalabra)
+
+                                if(esValido)
+                                    onConfirm(nuevaTarea, selectedPriority, fechaSeleccionada)
+                                else
+                                    isError = true
+
+                                isLoading = false
+                            }
+                        },
                         enabled = nuevaTarea.isNotBlank()
                     ) {
-                        Text("Listo")
+                        if(isLoading)
+                            Text("Validando...")
+                        else
+                            Text("Listo")
                     }
                 }
                 // --- CONTENT ---
@@ -863,12 +896,25 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Int, String) -> Uni
                 Spacer(Modifier.height(10.dp))
                 TextField(
                     value = nuevaTarea,
-                    onValueChange = { nuevaTarea = it },
-                    placeholder = { Text("Comprar patatas")},
+                    onValueChange = {
+                        nuevaTarea = it
+                        isError = false
+                    },
+                    placeholder = { Text("Alimentar a Snorlax")},
                     modifier = Modifier
                         .fillMaxWidth()
-                        .focusRequester(focusRequester)
+                        .focusRequester(focusRequester),
+                    isError = isError
                 )
+                if (isError) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = "La última palabra debe ser el nombre de un Pokémon.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                    )
+                }
                 Spacer(Modifier.height(20.dp))
                 // --- PRIORITIES ---
                 Text(
