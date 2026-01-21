@@ -9,10 +9,10 @@ data class Task(
 
     val pokemon: String = "",
     val tipos: List<String> = emptyList(),
-    val hp: String,
-    val ataque: String,
-    val defensa: String,
-    val velocidad: String,
+    val hp: String = "0",
+    val ataque: String = "0",
+    val defensa: String = "0",
+    val velocidad: String = "0",
     val imagen: String = "",
 
     val userId: String = ""
