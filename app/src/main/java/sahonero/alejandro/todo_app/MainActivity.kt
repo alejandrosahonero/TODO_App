@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nightlight
@@ -113,6 +114,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -129,6 +131,7 @@ import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Calendar
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -646,6 +649,12 @@ fun exportarTareas(context: Context, listaTareas: List<Task>){
         texto += "Tarea: ${it.description}\n" +
                 "Prioridad: ${when(it.priority){ 1 -> "Baja" 2 -> "Media" 3 -> "Alta" else -> "Ninguna" } }\n" +
                 "Fecha de expiración: ${it.expirationDate}\n" +
+                "Pokemon: ${it.pokemon}" +
+                "Tipos: ${it.tipos}" +
+                "HP: ${it.hp}" +
+                "Ataque: ${it.ataque}" +
+                "Defensa: ${it.defensa}" +
+                "Velocidad: ${it.velocidad}" +
                 "------------\n"
     }
 
@@ -708,6 +717,8 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
     var showRemoveDialog by remember { mutableStateOf(false) }
     var taskToDelete by remember { mutableStateOf<Task?>(null) }
 
+    var isExpanded by remember { mutableStateOf(false) }
+
     Box(
         Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -719,100 +730,202 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
             items( items = filteredTasks, key = { it.id } ) { tarea ->
 
                 val isCompleted = tarea.completed
-
-                Row(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .padding(top = 20.dp)
                         .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 ) {
-                    // --- CHECKBOX AND TASK ---
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .weight(1f)
-                            .padding(top = 10.dp, bottom = 10.dp, start = 10.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(
-                            checked = isCompleted,
-                            onCheckedChange = { isChecked ->
-                                onCheckedChange(tarea, isChecked)
-                            }
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        // --- DESCRIPTION AND PRIORITY ---
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = when(tarea.expirationDate){
-                                        "Never" -> "Sin expiración"
-                                        else -> tarea.expirationDate
-                                    },
-                                    color = when(tarea.expirationDate){
-                                        "Never" -> MaterialTheme.colorScheme.onSurfaceVariant
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
-                                    textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
-                                    fontSize = 12.sp
-                                )
-                                Text(
-                                    text = " ● ",
-                                    fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
-                                    textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
-                                    fontSize = 12.sp
-                                )
-                                Text(
-                                    text = when(tarea.priority){
-                                        1 -> "Baja"
-                                        2 -> "Media"
-                                        3 -> "Alta"
-                                        else -> "Sin prioridad"
-                                    },
-                                    color = when(tarea.priority){
-                                        1 -> Color.Green
-                                        2 -> Color.Yellow
-                                        3 -> Color.Red
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
-                                    textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Text(
-                                text = tarea.description,
-                                fontSize = 15.sp,
-                                color = when(selectedColor.value){
-                                    "Rojo" -> Color.Red
-                                    "Verde" -> Color.Green
-                                    "Azul" -> Color.Blue
-                                    else -> if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                                },
-                                fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
-                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null
+                        // --- CHECKBOX AND TASK ---
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(top = 10.dp, bottom = 10.dp, start = 10.dp)
+                        ) {
+                            Checkbox(
+                                checked = isCompleted,
+                                onCheckedChange = { isChecked ->
+                                    onCheckedChange(tarea, isChecked)
+                                }
                             )
+                            Spacer(Modifier.width(4.dp))
+                            // --- DESCRIPTION AND PRIORITY ---
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = when(tarea.expirationDate){
+                                            "Never" -> "Sin expiración"
+                                            else -> tarea.expirationDate
+                                        },
+                                        color = when(tarea.expirationDate){
+                                            "Never" -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                        fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                        textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                        fontSize = 12.sp
+                                    )
+                                    Text(
+                                        text = " ● ",
+                                        fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                        textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                        fontSize = 12.sp
+                                    )
+                                    Text(
+                                        text = when(tarea.priority){
+                                            1 -> "Baja"
+                                            2 -> "Media"
+                                            3 -> "Alta"
+                                            else -> "Sin prioridad"
+                                        },
+                                        color = when(tarea.priority){
+                                            1 -> Color.Green
+                                            2 -> Color.Yellow
+                                            3 -> Color.Red
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                        fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                        textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                Text(
+                                    text = tarea.description,
+                                    fontSize = 15.sp,
+                                    color = when(selectedColor.value){
+                                        "Rojo" -> Color.Red
+                                        "Verde" -> Color.Green
+                                        "Azul" -> Color.Blue
+                                        else -> if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                                    },
+                                    fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                    textDecoration = if (isCompleted) TextDecoration.LineThrough else null
+                                )
+                            }
+                        }
+                        Column() {
+                            // --- DELETE BUTTON ---
+                            IconButton(
+                                onClick = {
+                                    taskToDelete = tarea
+                                    showRemoveDialog = true
+                                },
+                                modifier = Modifier.padding(end = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = "Borrar tarea",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            // --- EXPAND BUTTON ---
+                            IconButton(
+                                onClick = {
+                                    isExpanded = !isExpanded
+                                },
+                                modifier = Modifier.padding(end = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = "Más info",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
-                    // --- DELETE BUTTON ---
-                    IconButton(
-                        onClick = {
-                            taskToDelete = tarea
-                            showRemoveDialog = true
-                        },
-                        modifier = Modifier.padding(end = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "Borrar tarea",
-                            modifier = Modifier.size(20.dp)
-                        )
+                    // --- POKEMON INFO ---
+                    if(isExpanded && tarea.pokemon.isNotEmpty()){
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 10.dp))
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Pokémon: ${tarea.pokemon.uppercase()}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(Modifier.height(8.dp))
+
+                            // --- IMAGEN DEL POKÉMON ---
+                            if (tarea.imagen.isNotEmpty()) {
+                                AsyncImage(
+                                    model = tarea.imagen,
+                                    contentDescription = "Imagen de ${tarea.pokemon}",
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+
+                            // --- TIPOS ---
+                            if (tarea.tipos.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Tipos: ",
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    tarea.tipos.forEach { tipo ->
+                                        Text(
+                                            text = tipo,
+                                            modifier = Modifier
+                                                .padding(horizontal = 4.dp)
+                                                .background(
+                                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                                    shape = MaterialTheme.shapes.small
+                                                )
+                                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            // --- STATS ---
+                            Text(
+                                text = "Estadísticas:",
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(Modifier.height(4.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                StatItem("HP", tarea.hp)
+                                StatItem("Ataque", tarea.ataque)
+                            }
+
+                            Spacer(Modifier.height(4.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                StatItem("Defensa", tarea.defensa)
+                                StatItem("Velocidad", tarea.velocidad)
+                            }
+                        }
                     }
                 }
             }
@@ -834,6 +947,30 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                 taskToDelete = null
             },
             onDismiss = { showRemoveDialog = false }
+        )
+    }
+}
+@Composable
+fun StatItem(label: String, value: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = MaterialTheme.shapes.small
+            )
+            .padding(12.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
