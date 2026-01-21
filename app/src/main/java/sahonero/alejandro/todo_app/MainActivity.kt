@@ -717,8 +717,6 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
     var showRemoveDialog by remember { mutableStateOf(false) }
     var taskToDelete by remember { mutableStateOf<Task?>(null) }
 
-    var isExpanded by remember { mutableStateOf(false) }
-
     Box(
         Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -728,8 +726,9 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
             Modifier.fillMaxSize()
         ) {
             items( items = filteredTasks, key = { it.id } ) { tarea ->
-
+                var isExpanded by remember { mutableStateOf(false) }
                 val isCompleted = tarea.completed
+
                 Column(
                     modifier = Modifier
                         .padding(top = 20.dp)
