@@ -745,19 +745,47 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                         Spacer(Modifier.width(4.dp))
                         // --- DESCRIPTION AND PRIORITY ---
                         Column {
-                            Text(
-                                text = when(tarea.expirationDate){
-                                    "Never" -> "Sin expiración"
-                                    else -> tarea.expirationDate
-                                },
-                                color = when(tarea.expirationDate){
-                                    "Never" -> MaterialTheme.colorScheme.onSurfaceVariant
-                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
-                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
-                                fontSize = 12.sp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = when(tarea.expirationDate){
+                                        "Never" -> "Sin expiración"
+                                        else -> tarea.expirationDate
+                                    },
+                                    color = when(tarea.expirationDate){
+                                        "Never" -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                    textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    text = " ● ",
+                                    fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                    textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    text = when(tarea.priority){
+                                        1 -> "Baja"
+                                        2 -> "Media"
+                                        3 -> "Alta"
+                                        else -> "Sin prioridad"
+                                    },
+                                    color = when(tarea.priority){
+                                        1 -> Color.Green
+                                        2 -> Color.Yellow
+                                        3 -> Color.Red
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
+                                    textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
+                                    fontSize = 12.sp
+                                )
+                            }
                             Text(
                                 text = tarea.description,
                                 fontSize = 15.sp,
@@ -769,23 +797,6 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                                 },
                                 fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
                                 textDecoration = if (isCompleted) TextDecoration.LineThrough else null
-                            )
-                            Text(
-                                text = when(tarea.priority){
-                                    1 -> "Baja"
-                                    2 -> "Media"
-                                    3 -> "Alta"
-                                    else -> "Sin prioridad"
-                                },
-                                color = when(tarea.priority){
-                                    1 -> Color.Green
-                                    2 -> Color.Yellow
-                                    3 -> Color.Red
-                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                fontStyle = if (isCompleted) FontStyle.Italic else FontStyle.Normal,
-                                textDecoration = if (isCompleted) TextDecoration.LineThrough else null,
-                                fontSize = 12.sp
                             )
                         }
                     }
