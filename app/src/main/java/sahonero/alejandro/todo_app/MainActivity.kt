@@ -1,14 +1,13 @@
 package sahonero.alejandro.todo_app
 
-import android.content.pm.PackageManager
 import android.Manifest
 import android.app.DatePickerDialog
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Build
-import kotlinx.coroutines.delay
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
@@ -23,19 +22,15 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -69,18 +64,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldColors
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -89,6 +84,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -100,6 +96,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -122,16 +119,16 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sahonero.alejandro.todo_app.data.model.Task
 import sahonero.alejandro.todo_app.ui.PokemonViewModel
+import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
 import sahonero.alejandro.todo_app.ui.tools.ShakeDetector
 import sahonero.alejandro.todo_app.ui.tools.TodoPreferences
-import sahonero.alejandro.todo_app.ui.theme.TODOAppTheme
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Calendar
-import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,8 +136,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TODOAppTheme(
-                darkTheme = TodoPreferences.getTheme(LocalContext.current).collectAsState(initial = isSystemInDarkTheme()).value
-            ){
+                darkTheme = TodoPreferences.getTheme(LocalContext.current)
+                    .collectAsState(initial = isSystemInDarkTheme()).value
+            ) {
                 AppNavigation()
             }
         }
@@ -156,8 +154,8 @@ fun AppNavigation() {
     NavHost(
         navController = navController,
         startDestination = "login"
-    ){
-        composable ("login"){
+    ) {
+        composable("login") {
             Login(
                 onLogin = {
                     navController.navigate("tasks") {
@@ -180,7 +178,7 @@ fun AppNavigation() {
 }
 
 @Composable
-fun Login(onLogin: () -> Unit){
+fun Login(onLogin: () -> Unit) {
     // Firebase variables
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
@@ -193,7 +191,7 @@ fun Login(onLogin: () -> Unit){
     var isRegistering by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    Surface( Modifier.fillMaxSize() ) {
+    Surface(Modifier.fillMaxSize()) {
         Box(
             Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -240,7 +238,7 @@ fun Login(onLogin: () -> Unit){
                         visualTransformation = PasswordVisualTransformation(),
                     )
                     Spacer(Modifier.height(10.dp))
-                    if(isRegistering){
+                    if (isRegistering) {
                         OutlinedTextField(
                             value = nameInput,
                             onValueChange = { nameInput = it },
@@ -250,7 +248,7 @@ fun Login(onLogin: () -> Unit){
                         )
                         Spacer(Modifier.height(20.dp))
                     }
-                    if(errorMessage != null) {
+                    if (errorMessage != null) {
                         Text(
                             text = errorMessage!!,
                             color = MaterialTheme.colorScheme.error
@@ -260,19 +258,20 @@ fun Login(onLogin: () -> Unit){
                     Spacer(Modifier.height(20.dp))
                     Button(
                         onClick = {
-                            if(email.isNotEmpty() && password.isNotEmpty()){
-                                if(isRegistering){
-                                    if(nameInput.isBlank()){
+                            if (email.isNotEmpty() && password.isNotEmpty()) {
+                                if (isRegistering) {
+                                    if (nameInput.isBlank()) {
                                         errorMessage = "Escribe tu nombre para registrarte"
                                         return@Button
                                     }
                                     auth.createUserWithEmailAndPassword(email, password)
                                         .addOnCompleteListener { task ->
-                                            if(task.isSuccessful){
+                                            if (task.isSuccessful) {
                                                 val user = auth.currentUser
-                                                val profileUpdates = UserProfileChangeRequest.Builder()
-                                                    .setDisplayName(nameInput)
-                                                    .build()
+                                                val profileUpdates =
+                                                    UserProfileChangeRequest.Builder()
+                                                        .setDisplayName(nameInput)
+                                                        .build()
 
                                                 user?.updateProfile(profileUpdates)
                                                     ?.addOnCompleteListener {
@@ -283,21 +282,21 @@ fun Login(onLogin: () -> Unit){
                                 } else {
                                     auth.signInWithEmailAndPassword(email, password)
                                         .addOnCompleteListener { task ->
-                                            if(task.isSuccessful) onLogin()
+                                            if (task.isSuccessful) onLogin()
                                             else errorMessage = task.exception?.message
                                         }
                                 }
                             }
                         }
                     ) {
-                        Text(if(isRegistering) "Registrarse" else "Iniciar Sesion")
+                        Text(if (isRegistering) "Registrarse" else "Iniciar Sesion")
                     }
                     // --- OTHER OPTIONS TO LOGIN ---
                     Spacer(Modifier.height(20.dp))
                     Row(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
-                    ){
+                    ) {
                         Spacer(Modifier.width(8.dp))
                         HorizontalDivider(Modifier.weight(1f))
                         Spacer(Modifier.width(12.dp))
@@ -322,19 +321,23 @@ fun Login(onLogin: () -> Unit){
                                     .addCredentialOption(googleIdOption)
                                     .build()
 
-                                try{
+                                try {
                                     val result = credentialManager.getCredential(context, request)
                                     val credential = result.credential
 
-                                    if(credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL){
-                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                                        val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                                    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                        val googleIdTokenCredential =
+                                            GoogleIdTokenCredential.createFrom(credential.data)
+                                        val firebaseCredential = GoogleAuthProvider.getCredential(
+                                            googleIdTokenCredential.idToken,
+                                            null
+                                        )
 
                                         auth.signInWithCredential(firebaseCredential)
                                             .addOnSuccessListener { onLogin() }
                                             .addOnFailureListener { e -> errorMessage = e.message }
                                     }
-                                } catch (e: Exception){
+                                } catch (e: Exception) {
                                     errorMessage = "Error Google: ${e.message}"
                                 }
                             }
@@ -358,7 +361,7 @@ fun Login(onLogin: () -> Unit){
 
                     TextButton(onClick = { isRegistering = !isRegistering }) {
                         Text(
-                            text = if(isRegistering) "¿Ya tienes cuenta? Entra aquí" else "¿No tienes cuenta? Registrate aquí",
+                            text = if (isRegistering) "¿Ya tienes cuenta? Entra aquí" else "¿No tienes cuenta? Registrate aquí",
                             textAlign = TextAlign.Center,
                             fontStyle = FontStyle.Italic
                         )
@@ -371,7 +374,7 @@ fun Login(onLogin: () -> Unit){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
+fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel) {
     // --- PREFERENCES ---
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -384,7 +387,7 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
     setAlias(userName)
     val db = FirebaseFirestore.getInstance()
 
-    if(user == null) return
+    if (user == null) return
 
     val taskList = remember { mutableStateOf<List<Task>>(emptyList()) }
 
@@ -392,11 +395,12 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
         val listener = db.collection("tasks")
             .whereEqualTo("userId", user.uid)
             .addSnapshotListener { snapshots, e ->
-                if(e != null){
-                    Toast.makeText(context, "Error al cargar: ${e.message}", Toast.LENGTH_LONG).show()
+                if (e != null) {
+                    Toast.makeText(context, "Error al cargar: ${e.message}", Toast.LENGTH_LONG)
+                        .show()
                     return@addSnapshotListener
                 }
-                if(snapshots != null){
+                if (snapshots != null) {
                     val tasks = snapshots.documents.map { doc ->
                         doc.toObject(Task::class.java)!!.copy(id = doc.id)
                     }
@@ -423,7 +427,7 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
             }
 
             // Luego ordenamos si hay un shake
-            if(sortByPriority)
+            if (sortByPriority)
                 searchResult.sortedByDescending { it.priority }
             else
                 searchResult
@@ -432,7 +436,8 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
     // --- NOTIFICATIONS ---
     var lastTaskTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     // For API 33+
-    val permissionLauncher = rememberLauncherForActivityResult( contract = ActivityResultContracts.RequestPermission() ){}
+    val permissionLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {}
 
     Scaffold(
         floatingActionButton = {
@@ -489,7 +494,8 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
                 listaTareas = taskList.value,
                 selectedColor = selectedColor,
                 onCheckedChange = { tareaAEditar, nuevoEstado ->
-                    db.collection("tasks").document(tareaAEditar.id).update("completed", nuevoEstado)
+                    db.collection("tasks").document(tareaAEditar.id)
+                        .update("completed", nuevoEstado)
                 },
                 onDeleteTask = { tareaABorrar ->
                     // Borramos la tarea directamente de la BD
@@ -499,7 +505,7 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
         }
     }
     // --- ADD TASK DIALOG ---
-    if(showAddTask){
+    if (showAddTask) {
         AddTaskDialog(
             onDismiss = { showAddTask = false },
             onConfirm = { nuevaTarea ->
@@ -520,8 +526,12 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
     }
     // --- PERMISSION CHECK ---
     LaunchedEffect(Unit) {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-            if(ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
@@ -540,7 +550,8 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
         val shakeDetector = ShakeDetector {
             // Alternamos el orden
             sortByPriority = !sortByPriority
-            Toast.makeText(context, "¡Lista ordenada por prioridad!", Toast.LENGTH_LONG).apply { show() }
+            Toast.makeText(context, "¡Lista ordenada por prioridad!", Toast.LENGTH_LONG)
+                .apply { show() }
         }
 
         // --- SENSOR LISTENER ---
@@ -556,7 +567,14 @@ fun Tasks(logout: () -> Unit, pokemonViewModel: PokemonViewModel){
 }
 
 @Composable
-fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, context: Context, scope: CoroutineScope, listaTareas: List<Task>, cerrarSesion: () -> Unit){
+fun VerticalMenu(
+    selectedTheme: State<Boolean>,
+    selectedColor: State<String>,
+    context: Context,
+    scope: CoroutineScope,
+    listaTareas: List<Task>,
+    cerrarSesion: () -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     var showPreferencesDialog by remember { mutableStateOf(false) }
     // --- MENU ---
@@ -631,7 +649,7 @@ fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, co
             )
         }
     }
-    if (showPreferencesDialog){
+    if (showPreferencesDialog) {
         PreferencesDialog(
             selectedTheme = selectedTheme,
             selectedColor = selectedColor,
@@ -642,12 +660,19 @@ fun VerticalMenu(selectedTheme: State<Boolean>, selectedColor: State<String>, co
     }
 }
 
-fun exportarTareas(context: Context, listaTareas: List<Task>){
+fun exportarTareas(context: Context, listaTareas: List<Task>) {
     val nombreArchivo = "tareas.txt"
     var texto = ""
     listaTareas.forEach {
         texto += "Tarea: ${it.description}\n" +
-                "Prioridad: ${when(it.priority){ 1 -> "Baja" 2 -> "Media" 3 -> "Alta" else -> "Ninguna" } }\n" +
+                "Prioridad: ${
+                    when (it.priority) {
+                        1 -> "Baja"
+                        2 -> "Media"
+                        3 -> "Alta"
+                        else -> "Ninguna"
+                    }
+                }\n" +
                 "Fecha de expiración: ${it.expirationDate}\n" +
                 "Pokemon: ${it.pokemon}" +
                 "Tipos: ${it.tipos}" +
@@ -659,7 +684,7 @@ fun exportarTareas(context: Context, listaTareas: List<Task>){
     }
 
     // Comprobamos la version de Android
-    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, nombreArchivo)
             put(MediaStore.Downloads.MIME_TYPE, "text/plain")
@@ -677,8 +702,9 @@ fun exportarTareas(context: Context, listaTareas: List<Task>){
         } ?: run {
             Toast.makeText(context, "No se han podido guardar las tareas", Toast.LENGTH_LONG).show()
         }
-    }else {
-        val directorio = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    } else {
+        val directorio =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         // Inicializamos el archivo
         val archivo = File(directorio, nombreArchivo)
 
@@ -690,7 +716,7 @@ fun exportarTareas(context: Context, listaTareas: List<Task>){
 }
 
 @Composable
-fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
+fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = searchQuery,
         onValueChange = onValueChange,
@@ -712,8 +738,15 @@ fun SearchBar(searchQuery: String, onValueChange: (String) -> Unit){
         singleLine = true
     )
 }
+
 @Composable
-fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: State<String>, onCheckedChange: (Task, Boolean) -> Unit, onDeleteTask: (Task) -> Unit){
+fun TaskList(
+    filteredTasks: List<Task>,
+    listaTareas: List<Task>,
+    selectedColor: State<String>,
+    onCheckedChange: (Task, Boolean) -> Unit,
+    onDeleteTask: (Task) -> Unit
+) {
     var showRemoveDialog by remember { mutableStateOf(false) }
     var taskToDelete by remember { mutableStateOf<Task?>(null) }
 
@@ -725,7 +758,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
         LazyColumn(
             Modifier.fillMaxSize()
         ) {
-            items( items = filteredTasks, key = { it.id } ) { tarea ->
+            items(items = filteredTasks, key = { it.id }) { tarea ->
                 var isExpanded by remember { mutableStateOf(false) }
                 val isCompleted = tarea.completed
 
@@ -762,11 +795,11 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = when(tarea.expirationDate){
+                                        text = when (tarea.expirationDate) {
                                             "Never" -> "Sin expiración"
                                             else -> tarea.expirationDate
                                         },
-                                        color = when(tarea.expirationDate){
+                                        color = when (tarea.expirationDate) {
                                             "Never" -> MaterialTheme.colorScheme.onSurfaceVariant
                                             else -> MaterialTheme.colorScheme.onSurfaceVariant
                                         },
@@ -781,13 +814,13 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                                         fontSize = 12.sp
                                     )
                                     Text(
-                                        text = when(tarea.priority){
+                                        text = when (tarea.priority) {
                                             1 -> "Baja"
                                             2 -> "Media"
                                             3 -> "Alta"
                                             else -> "Sin prioridad"
                                         },
-                                        color = when(tarea.priority){
+                                        color = when (tarea.priority) {
                                             1 -> Color.Green
                                             2 -> Color.Yellow
                                             3 -> Color.Red
@@ -801,7 +834,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                                 Text(
                                     text = tarea.description,
                                     fontSize = 15.sp,
-                                    color = when(selectedColor.value){
+                                    color = when (selectedColor.value) {
                                         "Rojo" -> Color.Red
                                         "Verde" -> Color.Green
                                         "Azul" -> Color.Blue
@@ -812,7 +845,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                                 )
                             }
                         }
-                        Column() {
+                        Column {
                             // --- DELETE BUTTON ---
                             IconButton(
                                 onClick = {
@@ -843,11 +876,12 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
                         }
                     }
                     // --- POKEMON INFO ---
-                    if(isExpanded && tarea.pokemon.isNotEmpty()){
+                    if (isExpanded && tarea.pokemon.isNotEmpty()) {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 10.dp))
 
                         Column(
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
                                 .padding(16.dp)
                         ) {
                             Text(
@@ -930,7 +964,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
             }
         }
         // --- ADVICE MESSAGE ---
-        if(listaTareas.isEmpty()){
+        if (listaTareas.isEmpty()) {
             Text(
                 text = "¡Anímate a añadir una tarea!",
                 style = MaterialTheme.typography.bodyLarge,
@@ -938,7 +972,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
             )
         }
     }
-    if(showRemoveDialog && taskToDelete != null){
+    if (showRemoveDialog && taskToDelete != null) {
         RemoveTaskDialog(
             onConfirm = {
                 onDeleteTask(taskToDelete!!)
@@ -949,6 +983,7 @@ fun TaskList(filteredTasks: List<Task>, listaTareas: List<Task>, selectedColor: 
         )
     }
 }
+
 @Composable
 fun StatItem(label: String, value: String) {
     Column(
@@ -973,9 +1008,15 @@ fun StatItem(label: String, value: String) {
         )
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (Task) -> Unit, alias: String, pokemonViewModel: PokemonViewModel){
+fun AddTaskDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (Task) -> Unit,
+    alias: String,
+    pokemonViewModel: PokemonViewModel
+) {
     // --- TASK ADDING ---
     var nuevaTarea by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableIntStateOf(0) }
@@ -989,19 +1030,19 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (Task) -> Unit, alias: Strin
 
     val scope = rememberCoroutineScope()
 
-    Dialog( onDismissRequest = onDismiss ) {
+    Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
-            Column(Modifier.padding(16.dp) ) {
+            Column(Modifier.padding(16.dp)) {
                 // --- ADD/CANCEL BUTTONS ---
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton( onClick = onDismiss ) {
+                    IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Cancelar"
@@ -1016,14 +1057,23 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (Task) -> Unit, alias: Strin
                                 val ultimaPalabra = nuevaTarea.trim().split(" ").lastOrNull() ?: ""
 
                                 // Obtenemos los detalles del Pokémon
-                                val pokemonDetails = pokemonViewModel.getPokemonDetails(ultimaPalabra)
+                                val pokemonDetails =
+                                    pokemonViewModel.getPokemonDetails(ultimaPalabra)
 
-                                if(pokemonDetails != null) {
+                                if (pokemonDetails != null) {
                                     // Extraemos los stats (PokeAPI devuelve en orden específico)
-                                    val hp = pokemonDetails.stats.find { it.stat.name == "hp" }?.base_stat?.toString() ?: "0"
-                                    val ataque = pokemonDetails.stats.find { it.stat.name == "attack" }?.base_stat?.toString() ?: "0"
-                                    val defensa = pokemonDetails.stats.find { it.stat.name == "defense" }?.base_stat?.toString() ?: "0"
-                                    val velocidad = pokemonDetails.stats.find { it.stat.name == "speed" }?.base_stat?.toString() ?: "0"
+                                    val hp =
+                                        pokemonDetails.stats.find { it.stat.name == "hp" }?.base_stat?.toString()
+                                            ?: "0"
+                                    val ataque =
+                                        pokemonDetails.stats.find { it.stat.name == "attack" }?.base_stat?.toString()
+                                            ?: "0"
+                                    val defensa =
+                                        pokemonDetails.stats.find { it.stat.name == "defense" }?.base_stat?.toString()
+                                            ?: "0"
+                                    val velocidad =
+                                        pokemonDetails.stats.find { it.stat.name == "speed" }?.base_stat?.toString()
+                                            ?: "0"
 
                                     // Extraemos tipos (traducidos al español)
                                     val tipos = pokemonDetails.types.map { it.type.name }
@@ -1055,7 +1105,7 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (Task) -> Unit, alias: Strin
                         },
                         enabled = nuevaTarea.isNotBlank()
                     ) {
-                        if(isLoading)
+                        if (isLoading)
                             Text("Validando...")
                         else
                             Text("Listo")
@@ -1074,7 +1124,7 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (Task) -> Unit, alias: Strin
                         nuevaTarea = it
                         isError = false
                     },
-                    placeholder = { Text("Alimentar a Snorlax")},
+                    placeholder = { Text("Alimentar a Snorlax") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
@@ -1106,25 +1156,25 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (Task) -> Unit, alias: Strin
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
                             selected = selectedPriority == 3,
-                            onClick = { selectedPriority = 3}
+                            onClick = { selectedPriority = 3 }
                         )
-                        Text("Alta", modifier = Modifier.clickable{ selectedPriority = 3})
+                        Text("Alta", modifier = Modifier.clickable { selectedPriority = 3 })
                     }
                     // Medium priority
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
                             selected = selectedPriority == 2,
-                            onClick = { selectedPriority = 2}
+                            onClick = { selectedPriority = 2 }
                         )
-                        Text("Media", modifier = Modifier.clickable{ selectedPriority = 2})
+                        Text("Media", modifier = Modifier.clickable { selectedPriority = 2 })
                     }
                     // Low priority
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
                             selected = selectedPriority == 1,
-                            onClick = { selectedPriority = 1}
+                            onClick = { selectedPriority = 1 }
                         )
-                        Text("Baja", modifier = Modifier.clickable{ selectedPriority = 1})
+                        Text("Baja", modifier = Modifier.clickable { selectedPriority = 1 })
                     }
                 }
                 Spacer(Modifier.height(20.dp))
@@ -1167,13 +1217,13 @@ fun DatePickerModal(currentDate: String, onDateSelected: (String) -> Unit) {
     )
 
     OutlinedTextField(
-        value = if(currentDate == "Never") "" else currentDate,
+        value = if (currentDate == "Never") "" else currentDate,
         onValueChange = {},
         label = { Text("¿Para cuando?") },
         placeholder = { Text("DD/MM/AAAA") },
         readOnly = true,
         trailingIcon = {
-            IconButton( onClick = { datePickerDialog.show() }) {
+            IconButton(onClick = { datePickerDialog.show() }) {
                 Icon(
                     imageVector = Icons.Default.DateRange,
                     contentDescription = "Seleccionar fecha"
@@ -1182,20 +1232,21 @@ fun DatePickerModal(currentDate: String, onDateSelected: (String) -> Unit) {
         }
     )
 }
+
 @Composable
-fun RemoveTaskDialog(onConfirm: () -> Unit, onDismiss: () -> Unit){
+fun RemoveTaskDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("¡Cuidado!") },
         text = { Text("¿Estas seguro que deseas borrar esta tarea?") },
         shape = MaterialTheme.shapes.medium,
         confirmButton = {
-            TextButton( onClick = onConfirm ) {
+            TextButton(onClick = onConfirm) {
                 Text("Borrar", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton( onClick = onDismiss ) {
+            TextButton(onClick = onDismiss) {
                 Text("Cancelar")
             }
         }
@@ -1203,9 +1254,15 @@ fun RemoveTaskDialog(onConfirm: () -> Unit, onDismiss: () -> Unit){
 }
 
 @Composable
-fun PreferencesDialog(selectedTheme: State<Boolean>, selectedColor: State<String>, context: Context, scope: CoroutineScope, onDismiss: () -> Unit){
+fun PreferencesDialog(
+    selectedTheme: State<Boolean>,
+    selectedColor: State<String>,
+    context: Context,
+    scope: CoroutineScope,
+    onDismiss: () -> Unit
+) {
     val textColor = listOf("Defecto", "Rojo", "Verde", "Azul")
-    Dialog( onDismissRequest = onDismiss ) {
+    Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -1281,10 +1338,10 @@ fun PreferencesDialog(selectedTheme: State<Boolean>, selectedColor: State<String
 
 // --- INACTIVITY NOTIFICATION FUNCTIONALLITY ---
 private const val CHANNEL_ID = "inactivity_channel"
-private const val NOTIFICATION_ID= 1
+private const val NOTIFICATION_ID = 1
 
 // --- NOTIFICATION CHANNEL ---
-fun createNotificationsChannel(context: Context){
+fun createNotificationsChannel(context: Context) {
     val name = "Recordatorios de tareas"
     val description = "Recordatorios por inactividad"
 
@@ -1300,10 +1357,14 @@ fun createNotificationsChannel(context: Context){
 }
 
 // --- SEND INACTIVITY NOTIFICATION ---
-fun sendInactivityNotification(context: Context){
+fun sendInactivityNotification(context: Context) {
     // Comporbamos el permiso
-    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-        if(ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED){
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             return //No envia si no hay permisos
         }
     }
@@ -1321,7 +1382,7 @@ fun sendInactivityNotification(context: Context){
 }
 
 private var alias = ""
-fun setAlias(nAlias: String){
+fun setAlias(nAlias: String) {
     alias = nAlias
 }
 
